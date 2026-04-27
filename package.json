@@ -1,7 +1,7 @@
 {
   "name": "taoism-website",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "author": "Marvin Studio",
   "type": "module",
   "scripts": {

@@ -1,8 +1,7 @@
-import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
+import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY, buildBackupData, restoreBackupData } from '../data/book';
 
 export const WEBDAV_CONFIG_KEY = 'webdav_config';
-export const WEBDAV_SYNC_CONFIG_KEY = 'webdav_sync_config';
-export const WEBDAV_REMOTE_PATH = '/daoism_sync.json';
+export const WEBDAV_REMOTE_PATH = '/daoism_backup.json';
 /** Tracks the last time local data was written, for conflict detection */
 export const LOCAL_LAST_WRITE_KEY = 'daoism_local_last_write';
 
@@ -11,18 +10,6 @@ export interface WebDAVConfig {
   username: string;
   password: string;
 }
-
-export interface WebDAVSyncConfig {
-  autoSyncOnLoad: boolean;
-  autoSyncOnChange: boolean;
-  debounceMs: number;
-}
-
-export const DEFAULT_SYNC_CONFIG: WebDAVSyncConfig = {
-  autoSyncOnLoad: true,
-  autoSyncOnChange: true,
-  debounceMs: 30000,
-};
 
 export type GlobalSyncStatus =
   | 'idle'
@@ -49,35 +36,6 @@ export function formatTime(iso: string) {
   }
 }
 
-export function buildBackupData() {
-  const booksData: Record<string, any> = {};
-  for (const book of BOOKS) {
-    booksData[book.id] = {
-      partitions: JSON.parse(localStorage.getItem(`${book.id}_${PARTITIONS_KEY}`) || 'null'),
-      interpretations: JSON.parse(localStorage.getItem(`${book.id}_${INTERPRETATION_KEY}`) || 'null'),
-    };
-  }
-  return {
-    version: 2,
-    type: 'daoism_backup',
-    syncedAt: new Date().toISOString(),
-    books: booksData,
-  };
-}
-
-export function restoreBackupData(data: any) {
-  if (data.type !== 'daoism_backup' || !data.books) {
-    throw new Error('无法识别的备份文件格式');
-  }
-  for (const bookId of Object.keys(data.books)) {
-    if (data.books[bookId].partitions) {
-      localStorage.setItem(`${bookId}_${PARTITIONS_KEY}`, JSON.stringify(data.books[bookId].partitions));
-    }
-    if (data.books[bookId].interpretations) {
-      localStorage.setItem(`${bookId}_${INTERPRETATION_KEY}`, JSON.stringify(data.books[bookId].interpretations));
-    }
-  }
-}
 
 /** Call this every time local data changes to track write time for conflict detection. */
 export function touchLocalWriteTime() {
@@ -96,15 +54,6 @@ export function loadWebDAVConfig(): WebDAVConfig | null {
   }
 }
 
-export function loadSyncConfig(): WebDAVSyncConfig {
-  try {
-    const saved = JSON.parse(localStorage.getItem(WEBDAV_SYNC_CONFIG_KEY) || 'null');
-    return saved ? { ...DEFAULT_SYNC_CONFIG, ...saved } : DEFAULT_SYNC_CONFIG;
-  } catch {
-    return DEFAULT_SYNC_CONFIG;
-  }
-}
-
 export async function fetchRemoteData(cfg: WebDAVConfig): Promise<any> {
   const res = await fetch(cfg.url + WEBDAV_REMOTE_PATH, {
     method: 'GET',
@@ -117,7 +66,7 @@ export async function fetchRemoteData(cfg: WebDAVConfig): Promise<any> {
 }
 
 export async function pushBackupToRemote(cfg: WebDAVConfig): Promise<string> {
-  const data = buildBackupData();
+  const data = buildBackupData(true);
   const body = JSON.stringify(data, null, 2);
   const res = await fetch(cfg.url + WEBDAV_REMOTE_PATH, {
     method: 'PUT',

@@ -36,6 +36,11 @@ export const AI_PRESETS = {
     endpoint: 'https://api.minimaxi.com/v1',
     suggest_model: ['MiniMax-M2.7', 'MiniMax-M2.5'],
     website: 'https://platform.minimaxi.com/'
+  },
+  custom: {
+    label: '自定义',
+    endpoint: '',
+    suggest_model: []
   }
 } as const;
 

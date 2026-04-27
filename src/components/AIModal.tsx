@@ -10,7 +10,6 @@ import {
   Settings,
   Send,
   Square,
-  Trash2,
   Bot,
   User,
 } from 'lucide-react';
@@ -235,13 +234,6 @@ export function AIModal({
             >
               <Settings size={13} />
             </button>
-            <button
-              onClick={() => clearMessages()}
-              title="清空对话"
-              className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#A63A2B] transition-colors rounded"
-            >
-              <Trash2 size={13} />
-            </button>
             {/* Hide button: hides modal, keeps messages */}
             <button
               onClick={onHide}
@@ -250,7 +242,7 @@ export function AIModal({
             >
               {/* Chevron-down as "hide" affordance */}
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M2 4.5L6.5 9L11 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 4.5L6.5 9L11 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
             {/* Close button: clears messages + closes */}
