@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router-dom';
 import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
+import { WebDAVSyncModal } from './WebDAVSyncModal';
 
 interface HeaderProps {
   title: string;
@@ -9,6 +10,8 @@ interface HeaderProps {
 }
 
 export function Header({ title, setIsAboutOpen }: HeaderProps) {
+  const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
+
   const handleGlobalExport = () => {
     const booksData: any = {};
     for (const book of BOOKS) {
@@ -63,45 +66,56 @@ export function Header({ title, setIsAboutOpen }: HeaderProps) {
   };
 
   return (
-    <header className="relative pt-8 px-6 md:pt-12 md:px-12 z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-      <div>
-        <div className="flex gap-4 items-baseline mb-2">
-          <motion.h1
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-6xl font-bold text-[#1A1A1A]"
-          >
-            {title}
-          </motion.h1>
-        </div>
-        <div className="h-1.5 w-32 bg-[#A63A2B]" />
-      </div>
-
-      <div className="w-full md:w-auto md:text-right mt-2 md:mt-0">
-        <div className="flex gap-3 md:gap-1 items-center justify-start md:justify-end mb-2 md:mb-1 flex-wrap">
-          <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
-            关于
-          </button>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
-          <button onClick={handleGlobalExport} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
-            导出
-          </button>
-          <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
-          <label className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
-            导入
-            <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
-          </label>
+    <>
+      <header className="relative pt-8 px-6 md:pt-12 md:px-12 z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <div className="flex gap-4 items-baseline mb-2">
+            <motion.h1
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-6xl font-bold text-[#1A1A1A]"
+            >
+              {title}
+            </motion.h1>
+          </div>
+          <div className="h-1.5 w-32 bg-[#A63A2B]" />
         </div>
 
-        <div className="flex gap-2 text-xl font-serif mt-3 md:mt-2 justify-start md:justify-end md:ml-4 flex-wrap">
-          {BOOKS.map((book, index) => (
-            <React.Fragment key={book.id}>
-              <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-[#A63A2B] font-bold" : "text-[#8C8471] hover:text-[#A63A2B]"}>{book.title}</NavLink>
-              {index < BOOKS.length - 1 && <span className="text-[#E2DED0]">/</span>}
-            </React.Fragment>
-          ))}
+        <div className="w-full md:w-auto md:text-right mt-2 md:mt-0">
+          <div className="flex gap-3 md:gap-1 items-center justify-start md:justify-end mb-2 md:mb-1 flex-wrap">
+            <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
+              关于
+            </button>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
+            <button onClick={handleGlobalExport} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
+              导出
+            </button>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
+            <label className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
+              导入
+              <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
+            </label>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
+            <button
+              onClick={() => setIsWebDAVOpen(true)}
+              className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm"
+            >
+              同步
+            </button>
+          </div>
+
+          <div className="flex gap-2 text-xl font-serif mt-3 md:mt-2 justify-start md:justify-end md:ml-4 flex-wrap">
+            {BOOKS.map((book, index) => (
+              <React.Fragment key={book.id}>
+                <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-[#A63A2B] font-bold" : "text-[#8C8471] hover:text-[#A63A2B]"}>{book.title}</NavLink>
+                {index < BOOKS.length - 1 && <span className="text-[#E2DED0]">/</span>}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <WebDAVSyncModal isOpen={isWebDAVOpen} onClose={() => setIsWebDAVOpen(false)} />
+    </>
   );
 }
