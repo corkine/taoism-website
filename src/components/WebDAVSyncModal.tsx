@@ -1,94 +1,69 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings } from 'lucide-react';
-import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
+import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings, ToggleLeft, ToggleRight } from 'lucide-react';
+import {
+  WebDAVConfig,
+  WebDAVSyncConfig,
+  GlobalSyncStatus,
+  WEBDAV_CONFIG_KEY,
+  WEBDAV_REMOTE_PATH,
+  formatTime,
+  fetchRemoteData,
+  pushBackupToRemote,
+  restoreBackupData,
+  loadWebDAVConfig,
+  loadSyncConfig,
+} from '../utils/webdav';
 
-const WEBDAV_CONFIG_KEY = 'webdav_config';
-const WEBDAV_REMOTE_PATH = '/daoism_sync.json';
-
-interface WebDAVConfig {
-  url: string;
-  username: string;
-  password: string;
-}
-
-type SyncStatus =
+type ModalSyncStatus =
   | { type: 'idle' }
   | { type: 'loading'; message: string }
   | { type: 'success'; message: string; time: string }
   | { type: 'error'; message: string };
 
-function getAuthHeader(username: string, password: string) {
-  return 'Basic ' + btoa(`${username}:${password}`);
-}
-
-function buildBackupData() {
-  const booksData: Record<string, any> = {};
-  for (const book of BOOKS) {
-    booksData[book.id] = {
-      partitions: JSON.parse(localStorage.getItem(`${book.id}_${PARTITIONS_KEY}`) || 'null'),
-      interpretations: JSON.parse(localStorage.getItem(`${book.id}_${INTERPRETATION_KEY}`) || 'null'),
-    };
-  }
-  return {
-    version: 2,
-    type: 'daoism_backup',
-    syncedAt: new Date().toISOString(),
-    books: booksData,
-  };
-}
-
-function restoreBackupData(data: any) {
-  if (data.type !== 'daoism_backup' || !data.books) {
-    throw new Error('无法识别的备份文件格式');
-  }
-  for (const bookId of Object.keys(data.books)) {
-    if (data.books[bookId].partitions) {
-      localStorage.setItem(`${bookId}_${PARTITIONS_KEY}`, JSON.stringify(data.books[bookId].partitions));
-    }
-    if (data.books[bookId].interpretations) {
-      localStorage.setItem(`${bookId}_${INTERPRETATION_KEY}`, JSON.stringify(data.books[bookId].interpretations));
-    }
-  }
-}
-
-function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString('zh-CN', {
-      month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 interface WebDAVSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
+  syncConfig: WebDAVSyncConfig;
+  onSaveSyncConfig: (cfg: WebDAVSyncConfig) => void;
+  onUploadSuccess?: (time: string) => void;
+  onDownloadSuccess?: () => void;
+  globalSyncStatus?: GlobalSyncStatus;
+  globalSyncMessage?: string;
+  globalLastSyncTime?: string | null;
 }
 
-export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
+export function WebDAVSyncModal({
+  isOpen,
+  onClose,
+  syncConfig,
+  onSaveSyncConfig,
+  onUploadSuccess,
+  onDownloadSuccess,
+  globalSyncStatus,
+  globalSyncMessage,
+  globalLastSyncTime,
+}: WebDAVSyncModalProps) {
   const [config, setConfig] = useState<WebDAVConfig>({ url: '', username: '', password: '' });
-  const [status, setStatus] = useState<SyncStatus>({ type: 'idle' });
+  const [status, setStatus] = useState<ModalSyncStatus>({ type: 'idle' });
   const [remoteInfo, setRemoteInfo] = useState<{ syncedAt?: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [draft, setDraft] = useState<WebDAVConfig>({ url: '', username: '', password: '' });
 
-  // Load saved config
+  // Unified draft: server config + sync config together
+  const [draftServer, setDraftServer] = useState<WebDAVConfig>({ url: '', username: '', password: '' });
+  const [draftSync, setDraftSync] = useState<WebDAVSyncConfig>(syncConfig);
+
+  // Load saved config when modal opens
   useEffect(() => {
     if (isOpen) {
-      try {
-        const saved = JSON.parse(localStorage.getItem(WEBDAV_CONFIG_KEY) || 'null');
-        if (saved) {
-          setConfig(saved);
-          setDraft(saved);
-          setShowSettings(false);
-        } else {
-          setShowSettings(true);
-        }
-      } catch {
+      const saved = loadWebDAVConfig();
+      if (saved) {
+        setConfig(saved);
+        setDraftServer(saved);
+        setShowSettings(false);
+      } else {
         setShowSettings(true);
       }
+      setDraftSync(loadSyncConfig());
       setStatus({ type: 'idle' });
       setRemoteInfo(null);
     }
@@ -96,14 +71,17 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
 
   const isConfigured = config.url.trim() !== '';
 
-  const handleSaveConfig = () => {
+  // Save both server config and sync config in one action
+  const handleSaveAll = () => {
     const trimmed: WebDAVConfig = {
-      url: draft.url.trim().replace(/\/$/, ''),
-      username: draft.username.trim(),
-      password: draft.password,
+      url: draftServer.url.trim().replace(/\/$/, ''),
+      username: draftServer.username.trim(),
+      password: draftServer.password,
     };
     setConfig(trimmed);
     localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(trimmed));
+    window.dispatchEvent(new Event('webdav-config-saved'));
+    onSaveSyncConfig(draftSync);
     setShowSettings(false);
     setStatus({ type: 'idle' });
     setRemoteInfo(null);
@@ -112,86 +90,48 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
   const checkRemote = useCallback(async (cfg: WebDAVConfig) => {
     setStatus({ type: 'loading', message: '正在检查远程文件…' });
     try {
-      const res = await fetch(cfg.url + WEBDAV_REMOTE_PATH, {
-        method: 'HEAD',
-        headers: { Authorization: getAuthHeader(cfg.username, cfg.password) },
-      });
-      if (res.ok) {
-        // Try to fetch metadata
-        const getRes = await fetch(cfg.url + WEBDAV_REMOTE_PATH, {
-          method: 'GET',
-          headers: { Authorization: getAuthHeader(cfg.username, cfg.password) },
-        });
-        if (getRes.ok) {
-          const data = await getRes.json();
-          setRemoteInfo({ syncedAt: data.syncedAt });
-          setStatus({ type: 'success', message: '远程文件存在', time: data.syncedAt ? formatTime(data.syncedAt) : '' });
-        } else {
-          setStatus({ type: 'success', message: '远程文件存在（无法读取元数据）', time: '' });
-        }
-      } else if (res.status === 401) {
-        setStatus({ type: 'error', message: '认证失败，请检查用户名和密码' });
-      } else if (res.status === 404) {
+      const data = await fetchRemoteData(cfg);
+      if (data) {
+        setRemoteInfo({ syncedAt: data.syncedAt });
+        setStatus({ type: 'success', message: '远程文件存在', time: data.syncedAt ? formatTime(data.syncedAt) : '' });
+      } else {
         setStatus({ type: 'idle' });
         setRemoteInfo(null);
-      } else {
-        setStatus({ type: 'error', message: `服务器返回 ${res.status}` });
       }
     } catch (e: any) {
-      setStatus({ type: 'error', message: `连接失败：${e.message || '未知错误'}` });
+      setStatus({ type: 'error', message: e.message || '连接失败' });
     }
   }, []);
 
   const handleUpload = async () => {
     setStatus({ type: 'loading', message: '正在上传数据…' });
     try {
-      const data = buildBackupData();
-      const body = JSON.stringify(data, null, 2);
-      const res = await fetch(config.url + WEBDAV_REMOTE_PATH, {
-        method: 'PUT',
-        headers: {
-          Authorization: getAuthHeader(config.username, config.password),
-          'Content-Type': 'application/json',
-        },
-        body,
-      });
-      if (res.ok || res.status === 201 || res.status === 204) {
-        const t = formatTime(data.syncedAt);
-        setStatus({ type: 'success', message: '上传成功', time: t });
-        setRemoteInfo({ syncedAt: data.syncedAt });
-      } else if (res.status === 401) {
-        setStatus({ type: 'error', message: '认证失败，请检查用户名和密码' });
-      } else {
-        setStatus({ type: 'error', message: `上传失败：服务器返回 ${res.status}` });
-      }
+      const syncedAt = await pushBackupToRemote(config);
+      const t = formatTime(syncedAt);
+      setStatus({ type: 'success', message: '上传成功', time: t });
+      setRemoteInfo({ syncedAt });
+      onUploadSuccess?.(t);
     } catch (e: any) {
-      setStatus({ type: 'error', message: `上传失败：${e.message || '未知错误'}` });
+      setStatus({ type: 'error', message: e.message || '上传失败' });
     }
   };
 
   const handleDownload = async () => {
     setStatus({ type: 'loading', message: '正在下载数据…' });
     try {
-      const res = await fetch(config.url + WEBDAV_REMOTE_PATH, {
-        method: 'GET',
-        headers: { Authorization: getAuthHeader(config.username, config.password) },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        restoreBackupData(data);
-        const t = data.syncedAt ? formatTime(data.syncedAt) : '';
-        setStatus({ type: 'success', message: '下载并恢复成功，即将刷新页面…', time: t });
-        setRemoteInfo({ syncedAt: data.syncedAt });
-        setTimeout(() => window.location.reload(), 1500);
-      } else if (res.status === 401) {
-        setStatus({ type: 'error', message: '认证失败，请检查用户名和密码' });
-      } else if (res.status === 404) {
+      const data = await fetchRemoteData(config);
+      if (!data) {
         setStatus({ type: 'error', message: '远程尚无备份文件，请先上传' });
-      } else {
-        setStatus({ type: 'error', message: `下载失败：服务器返回 ${res.status}` });
+        return;
       }
+      restoreBackupData(data);
+      const t = data.syncedAt ? formatTime(data.syncedAt) : '';
+      setStatus({ type: 'success', message: '下载并恢复成功，即将刷新页面…', time: t });
+      setRemoteInfo({ syncedAt: data.syncedAt });
+      onDownloadSuccess?.();
+      setTimeout(() => window.location.reload(), 1500);
     } catch (e: any) {
-      setStatus({ type: 'error', message: `下载失败：${e.message || '未知错误'}` });
+      setStatus({ type: 'error', message: e.message || '下载失败' });
     }
   };
 
@@ -199,15 +139,13 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
       <div
-        className="relative w-full max-w-md shadow-2xl"
+        className="relative w-full max-w-md shadow-2xl overflow-hidden"
         style={{ background: '#FDFBF7', borderTop: '4px solid #A63A2B' }}
       >
-        {/* Header */}
+        {/* ── Modal Header ── */}
         <div className="flex items-center justify-between px-8 pt-8 pb-5">
           <div className="flex items-center gap-3">
             <Cloud size={16} className="text-[#A63A2B]" />
@@ -218,9 +156,13 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
           <div className="flex items-center gap-3">
             {isConfigured && (
               <button
-                onClick={() => { setDraft(config); setShowSettings(v => !v); }}
+                onClick={() => {
+                  setDraftServer(config);
+                  setDraftSync(loadSyncConfig());
+                  setShowSettings(v => !v);
+                }}
                 className={`transition-colors ${showSettings ? 'text-[#A63A2B]' : 'text-[#8C8471] hover:text-[#1A1A1A]'}`}
-                title="配置"
+                title="设置"
               >
                 <Settings size={16} />
               </button>
@@ -231,48 +173,111 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
           </div>
         </div>
 
-        {/* Settings Form */}
+        {/* ── Unified Settings Panel ── */}
         {showSettings && (
-          <div className="px-8 pb-6 space-y-4 border-b border-[#E2DED0]">
-            <p className="text-[10px] uppercase tracking-widest text-[#8C8471] font-sans font-bold mb-3">
+          <div className="px-8 pb-6 space-y-5 border-b border-[#E2DED0]">
+
+            {/* Section: Server */}
+            <p className="text-[10px] uppercase tracking-widest text-[#8C8471] font-sans font-bold">
               服务器配置
             </p>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-1.5">
-                服务器地址
-              </label>
-              <input
-                type="text"
-                value={draft.url}
-                onChange={e => setDraft(prev => ({ ...prev, url: e.target.value }))}
-                placeholder="https://dav.example.com/dav"
-                className="w-full bg-transparent border-b-2 border-[#E2DED0] py-2 focus:border-[#A63A2B] outline-none text-sm font-sans text-[#1A1A1A] placeholder:text-[#C8C4B7]"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-1.5">
+                  服务器地址
+                </label>
+                <input
+                  type="text"
+                  value={draftServer.url}
+                  onChange={e => setDraftServer(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="https://dav.example.com/dav"
+                  className="w-full bg-transparent border-b-2 border-[#E2DED0] py-2 focus:border-[#A63A2B] outline-none text-sm font-sans text-[#1A1A1A] placeholder:text-[#C8C4B7]"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-1.5">
+                  用户名
+                </label>
+                <input
+                  type="text"
+                  value={draftServer.username}
+                  onChange={e => setDraftServer(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="username"
+                  className="w-full bg-transparent border-b-2 border-[#E2DED0] py-2 focus:border-[#A63A2B] outline-none text-sm font-sans text-[#1A1A1A] placeholder:text-[#C8C4B7]"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-1.5">
+                  密码
+                </label>
+                <input
+                  type="password"
+                  value={draftServer.password}
+                  onChange={e => setDraftServer(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="••••••••"
+                  className="w-full bg-transparent border-b-2 border-[#E2DED0] py-2 focus:border-[#A63A2B] outline-none text-sm font-sans text-[#1A1A1A] placeholder:text-[#C8C4B7]"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-1.5">
-                用户名
-              </label>
-              <input
-                type="text"
-                value={draft.username}
-                onChange={e => setDraft(prev => ({ ...prev, username: e.target.value }))}
-                placeholder="username"
-                className="w-full bg-transparent border-b-2 border-[#E2DED0] py-2 focus:border-[#A63A2B] outline-none text-sm font-sans text-[#1A1A1A] placeholder:text-[#C8C4B7]"
-              />
+
+            {/* Divider */}
+            <div className="pt-4 space-y-4">
+              <p className="text-[10px] uppercase tracking-widest text-[#8C8471] font-sans font-bold">
+                自动同步
+              </p>
+
+              {/* Toggle: auto pull on load */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-sans font-bold text-[#1A1A1A]">启动时自动拉取</p>
+                  <p className="text-[10px] font-sans text-[#8C8471] mt-0.5">加载后若远程较新则覆盖本地</p>
+                </div>
+                <button
+                  onClick={() => setDraftSync(p => ({ ...p, autoSyncOnLoad: !p.autoSyncOnLoad }))}
+                  className={`transition-colors flex-shrink-0 ml-4 ${draftSync.autoSyncOnLoad ? 'text-[#A63A2B]' : 'text-[#C8C4B7]'}`}
+                >
+                  {draftSync.autoSyncOnLoad ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                </button>
+              </div>
+
+              {/* Toggle: auto push on change */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-sans font-bold text-[#1A1A1A]">修改后自动上传</p>
+                  <p className="text-[10px] font-sans text-[#8C8471] mt-0.5">本地数据变更后延迟上传到云端</p>
+                </div>
+                <button
+                  onClick={() => setDraftSync(p => ({ ...p, autoSyncOnChange: !p.autoSyncOnChange }))}
+                  className={`transition-colors flex-shrink-0 ml-4 ${draftSync.autoSyncOnChange ? 'text-[#A63A2B]' : 'text-[#C8C4B7]'}`}
+                >
+                  {draftSync.autoSyncOnChange ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                </button>
+              </div>
+
+              {/* Debounce slider */}
+              {draftSync.autoSyncOnChange && (
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-2">
+                    上传延迟：{draftSync.debounceMs / 1000} 秒
+                  </label>
+                  <input
+                    type="range"
+                    min={10000}
+                    max={120000}
+                    step={10000}
+                    value={draftSync.debounceMs}
+                    onChange={e => setDraftSync(p => ({ ...p, debounceMs: Number(e.target.value) }))}
+                    className="w-full accent-[#A63A2B]"
+                  />
+                  <div className="flex justify-between text-[10px] font-sans text-[#C8C4B7] mt-1">
+                    <span>10 秒</span>
+                    <span>120 秒</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-[#A63A2B] font-sans font-bold block mb-1.5">
-                密码
-              </label>
-              <input
-                type="password"
-                value={draft.password}
-                onChange={e => setDraft(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="••••••••"
-                className="w-full bg-transparent border-b-2 border-[#E2DED0] py-2 focus:border-[#A63A2B] outline-none text-sm font-sans text-[#1A1A1A] placeholder:text-[#C8C4B7]"
-              />
-            </div>
+
+            {/* Actions */}
             <div className="flex justify-end gap-4 pt-1 font-sans">
               {isConfigured && (
                 <button
@@ -283,7 +288,7 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
                 </button>
               )}
               <button
-                onClick={handleSaveConfig}
+                onClick={handleSaveAll}
                 className="text-[10px] uppercase tracking-widest font-bold px-6 py-2 bg-[#1A1A1A] text-white hover:bg-[#A63A2B] transition-colors"
               >
                 保存
@@ -292,9 +297,9 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
           </div>
         )}
 
-        {/* Sync Actions */}
+        {/* ── Sync Actions ── */}
         {isConfigured && !showSettings && (
-          <div className="px-8 pb-8 space-y-6">
+          <div className="px-8 pb-8 space-y-5">
             {/* Server info */}
             <div className="flex items-start gap-2 p-3 bg-[#F5F2EB]">
               <Cloud size={13} className="text-[#8C8471] mt-0.5 flex-shrink-0" />
@@ -311,45 +316,46 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
               </div>
             </div>
 
-            {/* Status */}
-            <div className="min-h-[40px]">
-              {status.type === 'idle' && (
-                <div className="flex items-center gap-2 text-[#8C8471]">
-                  <div className="w-2 h-2 rounded-full bg-[#C8C4B7]" />
-                  <span className="text-xs font-sans">
-                    就绪。点击下方按钮手动上传或下载数据。
-                  </span>
+            {/* Auto-sync status — unified card */}
+            {globalSyncStatus && globalSyncStatus !== 'idle' && (
+              <div className={`flex items-center gap-2 px-3 py-2 bg-[#F5F2EB] border-l-2 ${globalSyncStatus === 'success' ? 'border-[#2D7A5B]' :
+                globalSyncStatus === 'error' ? 'border-[#A63A2B]' : 'border-[#A63A2B]'
+                }`}>
+                {globalSyncStatus === 'syncing' && <Loader size={12} className="animate-spin text-[#A63A2B] flex-shrink-0" />}
+                {globalSyncStatus === 'success' && <CheckCircle size={12} className="text-[#2D7A5B] flex-shrink-0" />}
+                {globalSyncStatus === 'error' && <AlertCircle size={12} className="text-[#A63A2B] flex-shrink-0" />}
+                <div>
+                  <p className="text-[10px] font-sans font-bold text-[#8C8471] uppercase tracking-widest">自动同步</p>
+                  <p className="text-[11px] font-sans text-[#1A1A1A]">{globalSyncMessage}</p>
+                  {globalLastSyncTime && <p className="text-[10px] font-sans text-[#8C8471]">{globalLastSyncTime}</p>}
                 </div>
-              )}
-              {status.type === 'loading' && (
-                <div className="flex items-center gap-2 text-[#8C8471]">
-                  <Loader size={14} className="animate-spin text-[#A63A2B]" />
-                  <span className="text-xs font-sans">{status.message}</span>
-                </div>
-              )}
-              {status.type === 'success' && (
-                <div className="flex items-start gap-2 text-[#2D7A5B]">
-                  <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-xs font-sans font-bold">{status.message}</span>
-                    {status.time && (
-                      <p className="text-[10px] text-[#8C8471] font-sans mt-0.5">时间：{status.time}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {status.type === 'error' && (
-                <div className="flex items-start gap-2 text-[#A63A2B]">
-                  <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
-                  <span className="text-xs font-sans">{status.message}</span>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Remote file info */}
-            {remoteInfo?.syncedAt && (
-              <div className="text-[10px] font-sans text-[#8C8471] -mt-2">
-                远程备份时间：{formatTime(remoteInfo.syncedAt)}
+            {/* Manual op status — same card style */}
+            {status.type !== 'idle' && (
+              <div className={`flex items-center gap-2 px-3 py-2 bg-[#F5F2EB] border-l-2 ${status.type === 'success' ? 'border-[#2D7A5B]' :
+                status.type === 'error' ? 'border-[#A63A2B]' : 'border-[#A63A2B]'
+                }`}>
+                {status.type === 'loading' && <Loader size={12} className="animate-spin text-[#A63A2B] flex-shrink-0" />}
+                {status.type === 'success' && <CheckCircle size={12} className="text-[#2D7A5B] flex-shrink-0" />}
+                {status.type === 'error' && <AlertCircle size={12} className="text-[#A63A2B] flex-shrink-0" />}
+                <div>
+                  <p className="text-[10px] font-sans font-bold text-[#8C8471] uppercase tracking-widest">手动操作</p>
+                  <p className="text-[11px] font-sans text-[#1A1A1A]">{status.message}</p>
+                  {status.type === 'success' && status.time && (
+                    <p className="text-[10px] font-sans text-[#8C8471]">{status.time}</p>
+                  )}
+                  {status.type === 'success' && remoteInfo?.syncedAt && (
+                    <p className="text-[10px] font-sans text-[#8C8471]">远程：{formatTime(remoteInfo.syncedAt)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {status.type === 'idle' && (
+              <div className="flex items-center gap-2 text-[#8C8471]">
+                <div className="w-2 h-2 rounded-full bg-[#C8C4B7] flex-shrink-0" />
+                <span className="text-xs font-sans">就绪。点击下方按钮手动上传或下载数据。</span>
               </div>
             )}
 
@@ -383,12 +389,12 @@ export function WebDAVSyncModal({ isOpen, onClose }: WebDAVSyncModalProps) {
             </button>
 
             <p className="text-[10px] font-sans text-[#C8C4B7] leading-relaxed">
-              上传会覆盖云端数据；下载会覆盖本地数据并刷新页面。建议操作前先本地导出备份。
+              手动上传会覆盖云端数据，建议先检查远程文件状态；手动下载会覆盖本地数据并刷新页面，建议先本地导出备份。
             </p>
           </div>
         )}
 
-        {/* Prompt to configure if not configured and settings are closed */}
+        {/* Prompt to configure if not yet configured */}
         {!isConfigured && !showSettings && (
           <div className="px-8 pb-8 text-center">
             <p className="text-sm font-sans text-[#8C8471] mb-4">尚未配置 WebDAV 服务器</p>

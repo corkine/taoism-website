@@ -1,15 +1,46 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router-dom';
+import { Loader, CheckCircle, AlertCircle, Cloud } from 'lucide-react';
 import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
+import { GlobalSyncStatus, WebDAVSyncConfig } from '../utils/webdav';
 
 interface HeaderProps {
   title: string;
   setIsAboutOpen: (isOpen: boolean) => void;
+  syncStatus?: GlobalSyncStatus;
+  syncMessage?: string;
+  lastSyncTime?: string | null;
+  syncConfig: WebDAVSyncConfig;
+  onSaveSyncConfig: (cfg: WebDAVSyncConfig) => void;
 }
 
-export function Header({ title, setIsAboutOpen }: HeaderProps) {
+function SyncStatusIcon({ status }: { status?: GlobalSyncStatus }) {
+  if (!status || status === 'idle') {
+    return <Cloud size={13} className="text-[#C8C4B7]" />;
+  }
+  if (status === 'syncing') {
+    return <Loader size={13} className="animate-spin text-[#A63A2B]" />;
+  }
+  if (status === 'success') {
+    return <CheckCircle size={13} className="text-[#2D7A5B]" />;
+  }
+  if (status === 'error') {
+    return <AlertCircle size={13} className="text-[#A63A2B]" />;
+  }
+  return <Cloud size={13} className="text-[#C8C4B7]" />;
+}
+
+export function Header({
+  title,
+  setIsAboutOpen,
+  syncStatus,
+  syncMessage,
+  lastSyncTime,
+  syncConfig,
+  onSaveSyncConfig,
+}: HeaderProps) {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
 
   const handleGlobalExport = () => {
@@ -86,20 +117,23 @@ export function Header({ title, setIsAboutOpen }: HeaderProps) {
             <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
               关于
             </button>
-            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
             <button onClick={handleGlobalExport} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
               导出
             </button>
-            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
             <label className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
               导入
               <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
             </label>
-            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
+            {/* Sync button with live status icon */}
             <button
               onClick={() => setIsWebDAVOpen(true)}
-              className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm"
+              title={syncMessage || '点击打开同步面板'}
+              className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1.5 py-1 rounded-sm"
             >
+              <SyncStatusIcon status={syncStatus} />
               同步
             </button>
           </div>
@@ -115,7 +149,15 @@ export function Header({ title, setIsAboutOpen }: HeaderProps) {
         </div>
       </header>
 
-      <WebDAVSyncModal isOpen={isWebDAVOpen} onClose={() => setIsWebDAVOpen(false)} />
+      <WebDAVSyncModal
+        isOpen={isWebDAVOpen}
+        onClose={() => setIsWebDAVOpen(false)}
+        syncConfig={syncConfig}
+        onSaveSyncConfig={onSaveSyncConfig}
+        globalSyncStatus={syncStatus}
+        globalSyncMessage={syncMessage}
+        globalLastSyncTime={lastSyncTime}
+      />
     </>
   );
 }

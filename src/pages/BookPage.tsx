@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MainSection, SubSection } from '../types';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
@@ -8,6 +8,8 @@ import { AIModal } from '../components/AIModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
 import { useAISettings } from '../hooks/useAISettings';
+import { useWebDAVSync } from '../hooks/useWebDAVSync';
+import { touchLocalWriteTime } from '../utils/webdav';
 
 export default function BookPage({ bookId, key }: { bookId: string; key?: string | number }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
@@ -64,6 +66,9 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
   const [isAIVisible, setIsAIVisible] = useState(false);
   const [aiSystemPrompt, setAISystemPrompt] = useState<string | undefined>(undefined);
 
+  // WebDAV auto-sync
+  const { syncState, syncConfig, saveSyncConfig, notifyLocalChange } = useWebDAVSync();
+
   // Form State
   const [formMain, setFormMain] = useState<Omit<MainSection, 'id' | 'subSections'>>({
     title: '',
@@ -87,14 +92,30 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
     setCustomInterpretations(savedInt ? JSON.parse(savedInt) : {});
   }, [bookId, bookConfig.defaultPartitions, partitionsStorageKey, interpretationStorageKey]);
 
-  // Save to LocalStorage
+  // Save to LocalStorage + notify auto-sync
   useEffect(() => {
     localStorage.setItem(partitionsStorageKey, JSON.stringify(mainSections));
-  }, [mainSections, partitionsStorageKey]);
+    touchLocalWriteTime();
+    notifyLocalChange();
+  }, [mainSections, partitionsStorageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     localStorage.setItem(interpretationStorageKey, JSON.stringify(customInterpretations));
-  }, [customInterpretations, interpretationStorageKey]);
+    touchLocalWriteTime();
+    notifyLocalChange();
+  }, [customInterpretations, interpretationStorageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload state when auto-sync restores remote data
+  useEffect(() => {
+    const handler = () => {
+      const savedPartitions = localStorage.getItem(partitionsStorageKey);
+      setMainSections(savedPartitions ? JSON.parse(savedPartitions) : bookConfig.defaultPartitions);
+      const savedInt = localStorage.getItem(interpretationStorageKey);
+      setCustomInterpretations(savedInt ? JSON.parse(savedInt) : {});
+    };
+    window.addEventListener('webdav-data-restored', handler);
+    return () => window.removeEventListener('webdav-data-restored', handler);
+  }, [partitionsStorageKey, interpretationStorageKey, bookConfig.defaultPartitions]);
 
   useEffect(() => {
     document.title = `道经释义 · ${bookConfig.title} 第 ${selectedChapterId} 章`;
@@ -234,6 +255,11 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
       <Header
         title={bookConfig.title}
         setIsAboutOpen={setIsAboutOpen}
+        syncStatus={syncState.status}
+        syncMessage={syncState.message}
+        lastSyncTime={syncState.lastSyncTime}
+        syncConfig={syncConfig}
+        onSaveSyncConfig={saveSyncConfig}
       />
 
       <main className="mt-6 md:mt-8 px-6 md:px-12 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-10">
