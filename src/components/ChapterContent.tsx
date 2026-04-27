@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, Edit2 } from 'lucide-react';
-import { laozi } from '../data/laozi';
+import { Chapter } from '../types';
 
 interface ChapterContentProps {
+  chapters: Chapter[];
   selectedChapterId: number;
   setSelectedChapterId: (id: number | ((prev: number) => number)) => void;
   customInterpretations: Record<number, string>;
@@ -15,6 +16,7 @@ interface ChapterContentProps {
 }
 
 export function ChapterContent({
+  chapters,
   selectedChapterId,
   setSelectedChapterId,
   customInterpretations,
@@ -24,7 +26,7 @@ export function ChapterContent({
   tempInterpretation,
   setTempInterpretation
 }: ChapterContentProps) {
-  const selectedChapter = laozi.find(c => c.id === selectedChapterId) || laozi[0];
+  const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
   return (
     <section className="flex-1">
@@ -34,8 +36,9 @@ export function ChapterContent({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.4 }}
+          // transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="relative bg-white border border-[#E2DED0] p-12 shadow-sm min-h-[500px]"
+          style={{ willChange: 'transform, opacity' }}
         >
           <div className="absolute -left-4 top-12 flex flex-col items-center gap-2">
             <div className="text-[10px] text-[#A63A2B] font-bold font-sans rotate-180 writing-vertical-rl tracking-widest uppercase">Chapter</div>

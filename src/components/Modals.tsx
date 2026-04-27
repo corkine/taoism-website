@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Save } from 'lucide-react';
 import { MainSection, SubSection } from '../types';
 import { version, author } from '../../package.json';
+import { COPY_NOTE, TRANS_NOTE } from '../data/book';
 
 interface ModalsProps {
   isEditing: boolean;
@@ -10,7 +11,7 @@ interface ModalsProps {
   formMain: Omit<MainSection, 'id' | 'subSections'>;
   setFormMain: (form: Omit<MainSection, 'id' | 'subSections'>) => void;
   handleSaveSection: () => void;
-  
+
   isEditingSub: boolean;
   setIsEditingSub: (b: boolean) => void;
   formSub: Omit<SubSection, 'id'>;
@@ -232,10 +233,10 @@ export function Modals({
 
               <div className="space-y-4 text-[#3D3D3D] text-sm leading-relaxed font-serif">
                 <p>
-                  <strong>内容译本：</strong> 本应用使用的《老子》（道德经）原文主要参考自通行本（王弼本），并结合帛书本、竹简本等进行了部分校勘与标点整理。
+                  <strong>内容译本：</strong> {TRANS_NOTE}
                 </p>
                 <p>
-                  <strong>版权声明：</strong> 《老子》原文属于公有领域（Public Domain）。本应用的界面设计、交互逻辑及提供的章节划分工具受版权保护。
+                  <strong>版权声明：</strong> {COPY_NOTE}
                 </p>
                 <p>
                   用户可以使用本应用进行个人的阅读、分章和释义。用户导出的个人见解数据归用户所有。软件仅供个人非商业用途使用。

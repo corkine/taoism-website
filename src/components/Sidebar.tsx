@@ -3,6 +3,7 @@ import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { MainSection } from '../types';
 
 interface SidebarProps {
+  chaptersCount: number;
   selectedChapterId: number;
   setSelectedChapterId: (id: number) => void;
   mainSections: MainSection[];
@@ -13,6 +14,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({
+  chaptersCount,
   selectedChapterId,
   setSelectedChapterId,
   mainSections,
@@ -22,12 +24,12 @@ export function Sidebar({
   handleRemoveSubSection
 }: SidebarProps) {
   return (
-    <aside className="lg:col-span-3 flex flex-col gap-8">
+    <aside className="lg:col-span-3 flex flex-col gap-6">
       {/* Chapter Quick Grid */}
       <div className="border border-[#E2DED0] p-4 bg-white shadow-sm rounded-sm">
         <h3 className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] mb-4 font-sans">索引</h3>
         <div className="grid grid-cols-9 gap-1">
-          {Array.from({ length: 81 }, (_, i) => i + 1).map(num => (
+          {Array.from({ length: chaptersCount }, (_, i) => i + 1).map(num => (
             <button
               key={num}
               onClick={() => setSelectedChapterId(num)}
@@ -43,7 +45,7 @@ export function Sidebar({
       </div>
 
       {/* Classification Section */}
-      <div className="border-t-2 border-[#1A1A1A] pt-4">
+      <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-[#1A1A1A] font-sans">分章定义</h3>
           <button

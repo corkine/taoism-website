@@ -1,9 +1,5 @@
 import { MainSection } from "../types";
 
-export const LAOZI_INTERPRETATION_STORAGE_KEY = 'laozi_interpretation';
-
-export const LAOZI_STORAGE_KEY = 'laozi_custom_partitions';
-
 export const LAOZI_DEFAULT_PARTITIONS: MainSection[] = [
     {
         id: 'default-1',
@@ -43,5 +39,32 @@ export const LAOZI_DEFAULT_PARTITIONS: MainSection[] = [
             { id: '3-3', title: '守朴', startChapter: 32, endChapter: 34, description: '' },
             { id: '3-4', title: '执象', startChapter: 35, endChapter: 37, description: '' },
         ]
+    }
+];
+
+export const ZHUANGZI_DEFAULT_PARTITIONS: MainSection[] = [
+    {
+        id: 'default-z1',
+        title: '内篇',
+        startChapter: 1,
+        endChapter: 7,
+        description: '',
+        subSections: []
+    },
+    {
+        id: 'default-z2',
+        title: '外篇',
+        startChapter: 8,
+        endChapter: 22,
+        description: '',
+        subSections: []
+    },
+    {
+        id: 'default-z3',
+        title: '杂篇',
+        startChapter: 23,
+        endChapter: 33,
+        description: '',
+        subSections: []
     }
 ];

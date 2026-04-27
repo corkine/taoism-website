@@ -1,23 +1,79 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { NavLink } from 'react-router-dom';
+import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
 
 interface HeaderProps {
+  title: string;
   setIsAboutOpen: (isOpen: boolean) => void;
-  handleExport: () => void;
-  handleImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function Header({ setIsAboutOpen, handleExport, handleImport }: HeaderProps) {
+export function Header({ title, setIsAboutOpen }: HeaderProps) {
+  const handleGlobalExport = () => {
+    const booksData: any = {};
+    for (const book of BOOKS) {
+      booksData[book.id] = {
+        partitions: JSON.parse(localStorage.getItem(`${book.id}_${PARTITIONS_KEY}`) || 'null'),
+        interpretations: JSON.parse(localStorage.getItem(`${book.id}_${INTERPRETATION_KEY}`) || 'null')
+      };
+    }
+    const data = {
+      version: 2,
+      type: 'daoism_backup',
+      books: booksData
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "daoism_all_data.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleGlobalImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = JSON.parse(evt.target?.result as string);
+        if (data.type === 'daoism_backup' && data.books) {
+          for (const bookId of Object.keys(data.books)) {
+            if (data.books[bookId].partitions) {
+              localStorage.setItem(`${bookId}_${PARTITIONS_KEY}`, JSON.stringify(data.books[bookId].partitions));
+            }
+            if (data.books[bookId].interpretations) {
+              localStorage.setItem(`${bookId}_${INTERPRETATION_KEY}`, JSON.stringify(data.books[bookId].interpretations));
+            }
+          }
+          alert('数据导入成功！');
+          window.location.reload();
+        } else {
+          alert('无法识别的备份文件格式！');
+        }
+      } catch (err) {
+        alert('无效的文件格式！');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   return (
     <header className="relative pt-12 px-12 z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
       <div>
-        <motion.h1
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="text-6xl font-bold mb-2 text-[#1A1A1A] flex items-baseline gap-4"
-        >
-          老子
-        </motion.h1>
+        <div className="flex gap-4 items-baseline mb-2">
+          <motion.h1
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-6xl font-bold text-[#1A1A1A]"
+          >
+            {title}
+          </motion.h1>
+        </div>
         <div className="h-1.5 w-32 bg-[#A63A2B]" />
       </div>
 
@@ -27,16 +83,24 @@ export function Header({ setIsAboutOpen, handleExport, handleImport }: HeaderPro
             关于
           </button>
           <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
-          <button onClick={handleExport} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
+          <button onClick={handleGlobalExport} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
             导出
           </button>
           <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">|</span>
           <label className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
             导入
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+            <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
           </label>
         </div>
-        <div className="text-xl font-medium mt-1 text-[#1A1A1A]">解经助手</div>
+
+        <div className="flex gap-2 text-xl ml-4 font-serif mt-2 justify-end">
+          {BOOKS.map((book, index) => (
+            <React.Fragment key={book.id}>
+              <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-[#A63A2B] font-bold" : "text-[#8C8471] hover:text-[#A63A2B]"}>{book.title}</NavLink>
+              {index < BOOKS.length - 1 && <span className="text-[#E2DED0]">/</span>}
+            </React.Fragment>
+          ))}
+        </div>
       </div>
     </header>
   );
