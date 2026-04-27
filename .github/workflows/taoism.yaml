@@ -1,0 +1,74 @@
+name: Taoism Build & Deploy
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "package.json"
+      - ".github/workflows/taoism.yaml"
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        env:
+          VITE_BASE_PATH: /taoism
+        run: pnpm run build
+
+      - name: Run OSS Release
+        id: transfer
+        env:
+          ADMIN_OSS_DESTINATION: ${{ secrets.TAOISM_OSS_DESTINATION }}
+        run: |
+          wget https://static2.mazhangjing.com/dist/oss-uploader
+          chmod +x oss-uploader
+          short_sha=$(echo ${{ github.sha }} | cut -c1-8)
+          echo $short_sha > dist/release.txt
+          ./oss-uploader --source dist --oss-destination "$TAOISM_OSS_DESTINATION"
+
+      - name: Notice to Slack
+        id: slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.18.0
+        with:
+          payload: |
+            {
+              "text": "Taoism Build & Deploy ${{ job.status }} - Commit: ${{ github.sha }} <${{ github.event.pull_request.html_url || github.event.head_commit.url }}| HERE>"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
