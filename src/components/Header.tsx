@@ -63,7 +63,7 @@ export function Header({ title, setIsAboutOpen }: HeaderProps) {
   };
 
   return (
-    <header className="relative pt-12 px-12 z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <header className="relative pt-8 px-6 md:pt-12 md:px-12 z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
       <div>
         <div className="flex gap-4 items-baseline mb-2">
           <motion.h1
@@ -77,8 +77,8 @@ export function Header({ title, setIsAboutOpen }: HeaderProps) {
         <div className="h-1.5 w-32 bg-[#A63A2B]" />
       </div>
 
-      <div className="text-right hidden md:block">
-        <div className="flex gap-1 items-center justify-end mb-1">
+      <div className="w-full md:w-auto md:text-right mt-2 md:mt-0">
+        <div className="flex gap-3 md:gap-1 items-center justify-start md:justify-end mb-2 md:mb-1 flex-wrap">
           <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
             关于
           </button>
@@ -93,7 +93,7 @@ export function Header({ title, setIsAboutOpen }: HeaderProps) {
           </label>
         </div>
 
-        <div className="flex gap-2 text-xl ml-4 font-serif mt-2 justify-end">
+        <div className="flex gap-2 text-xl font-serif mt-3 md:mt-2 justify-start md:justify-end md:ml-4 flex-wrap">
           {BOOKS.map((book, index) => (
             <React.Fragment key={book.id}>
               <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-[#A63A2B] font-bold" : "text-[#8C8471] hover:text-[#A63A2B]"}>{book.title}</NavLink>

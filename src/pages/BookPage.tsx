@@ -4,15 +4,32 @@ import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
 import { ChapterContent } from '../components/ChapterContent';
 import { Modals } from '../components/Modals';
+import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
 
-export default function BookPage({ bookId }: { bookId: string }) {
+export default function BookPage({ bookId, key }: { bookId: string; key?: string | number }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
   const chaptersCount = bookConfig.content.length;
   const partitionsStorageKey = `${bookId}_${PARTITIONS_KEY}`;
   const interpretationStorageKey = `${bookId}_${INTERPRETATION_KEY}`;
 
-  const [selectedChapterId, setSelectedChapterId] = useState<number>(1);
+  const { chapterId } = useParams();
+  const navigate = useNavigate();
+
+  const parsedChapterId = chapterId ? parseInt(chapterId, 10) : 1;
+  const selectedChapterId = (isNaN(parsedChapterId) || parsedChapterId < 1 || parsedChapterId > chaptersCount)
+    ? 1
+    : parsedChapterId;
+
+  const setSelectedChapterId = (idOrUpdater: number | ((prev: number) => number)) => {
+    let newId: number;
+    if (typeof idOrUpdater === 'function') {
+      newId = idOrUpdater(selectedChapterId);
+    } else {
+      newId = idOrUpdater;
+    }
+    navigate(`/${bookId}/${newId}`);
+  };
   const [mainSections, setMainSections] = useState<MainSection[]>(() => {
     const saved = localStorage.getItem(partitionsStorageKey);
     if (saved) {
@@ -54,19 +71,16 @@ export default function BookPage({ bookId }: { bookId: string }) {
   });
 
   useEffect(() => {
-    setSelectedChapterId(1);
     const saved = localStorage.getItem(partitionsStorageKey);
     setMainSections(saved ? JSON.parse(saved) : bookConfig.defaultPartitions);
-    
+
     const savedInt = localStorage.getItem(interpretationStorageKey);
     setCustomInterpretations(savedInt ? JSON.parse(savedInt) : {});
   }, [bookId, bookConfig.defaultPartitions, partitionsStorageKey, interpretationStorageKey]);
 
   // Save to LocalStorage
   useEffect(() => {
-    if (mainSections.length > 0) {
-      localStorage.setItem(partitionsStorageKey, JSON.stringify(mainSections));
-    }
+    localStorage.setItem(partitionsStorageKey, JSON.stringify(mainSections));
   }, [mainSections, partitionsStorageKey]);
 
   useEffect(() => {
@@ -202,17 +216,14 @@ export default function BookPage({ bookId }: { bookId: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#2D2926] font-serif selection:bg-[#A63A2B]/10 selection:text-[#A63A2B]">
-      {/* Aesthetic Accents */}
-      <div className="fixed top-0 right-0 w-32 h-full border-l border-[#E2DED0] opacity-20 pointer-events-none z-0" />
-
+    <div className="max-w-7xl mx-auto min-h-screen bg-[#FDFBF7] text-[#2D2926] font-serif selection:bg-[#A63A2B]/10 selection:text-[#A63A2B]">
       {/* Header Area */}
       <Header
         title={bookConfig.title}
         setIsAboutOpen={setIsAboutOpen}
       />
 
-      <main className="mt-8 px-12 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
+      <main className="mt-6 md:mt-8 px-6 md:px-12 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-10">
         {/* Left Column: Index and Classification */}
         <Sidebar
           chaptersCount={chaptersCount}
@@ -226,7 +237,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
         />
 
         {/* Center Content Area */}
-        <div className="lg:col-span-9 flex flex-col md:flex-row gap-12">
+        <div className="lg:col-span-9 flex flex-col md:flex-row gap-8 md:gap-12">
           {/* Chapter Content */}
           <ChapterContent
             chapters={bookConfig.content}
@@ -264,6 +275,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
         :root {
           --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
           --font-serif: 'Noto Serif SC', serif;
+          background-color: #FDFBF7;
         }
 
         .font-serif {

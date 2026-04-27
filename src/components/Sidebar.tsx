@@ -29,18 +29,37 @@ export function Sidebar({
       <div className="border border-[#E2DED0] p-4 bg-white shadow-sm rounded-sm">
         <h3 className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] mb-4 font-sans">索引</h3>
         <div className="grid grid-cols-9 gap-1">
-          {Array.from({ length: chaptersCount }, (_, i) => i + 1).map(num => (
-            <button
-              key={num}
-              onClick={() => setSelectedChapterId(num)}
-              className={`w-full aspect-square text-[10px] flex items-center justify-center transition-colors font-sans ${selectedChapterId === num
-                ? 'bg-[#A63A2B] text-white'
-                : 'bg-[#FDF2F0] text-[#A63A2B] hover:bg-[#F5E1DE]'
-                }`}
-            >
-              {num}
-            </button>
-          ))}
+          {Array.from({ length: chaptersCount }, (_, i) => i + 1).map(num => {
+            let itemClasses = 'bg-[#FDF2F0] text-[#A63A2B] hover:bg-[#F5E1DE]';
+            if (selectedChapterId === num) {
+              itemClasses = 'bg-[#A63A2B] text-white';
+            } else {
+              const sectionIndex = mainSections.findIndex(
+                (sec) => num >= sec.startChapter && num <= sec.endChapter
+              );
+              if (sectionIndex !== -1) {
+                const colors = [
+                  'bg-[#F0F7FD] text-[#2B6EA6] hover:bg-[#DEEBF5]',
+                  'bg-[#F0FDF5] text-[#2BA658] hover:bg-[#DEF5E6]',
+                  'bg-[#FCFDF0] text-[#A6A02B] hover:bg-[#F3F5DE]',
+                  'bg-[#F4F0FD] text-[#6E2BA6] hover:bg-[#E5DEF5]',
+                  'bg-[#FDF6F0] text-[#A6612B] hover:bg-[#F5E8DE]',
+                  'bg-[#FDF0F7] text-[#A62B6E] hover:bg-[#F5DEEB]',
+                ];
+                itemClasses = colors[sectionIndex % colors.length];
+              }
+            }
+
+            return (
+              <button
+                key={num}
+                onClick={() => setSelectedChapterId(num)}
+                className={`w-full aspect-square text-[10px] flex items-center justify-center transition-colors font-sans ${itemClasses}`}
+              >
+                {num}
+              </button>
+            );
+          })}
         </div>
       </div>
 

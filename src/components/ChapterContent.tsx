@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, Edit2 } from 'lucide-react';
 import { Chapter } from '../types';
 
@@ -30,25 +29,16 @@ export function ChapterContent({
 
   return (
     <section className="flex-1">
-      <AnimatePresence mode="wait">
-        <motion.article
-          key={selectedChapterId}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          // transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="relative bg-white border border-[#E2DED0] p-12 shadow-sm min-h-[500px]"
-          style={{ willChange: 'transform, opacity' }}
-        >
-          <div className="absolute -left-4 top-12 flex flex-col items-center gap-2">
+      <article className="relative bg-white border border-[#E2DED0] p-6 md:p-12 shadow-sm min-h-[500px]">
+        <div className="hidden md:flex absolute -left-4 top-12 flex-col items-center gap-2">
             <div className="text-[10px] text-[#A63A2B] font-bold font-sans rotate-180 writing-vertical-rl tracking-widest uppercase">Chapter</div>
             <div className="bg-[#1A1A1A] text-white w-8 h-8 flex items-center justify-center text-xs font-sans font-bold">
               {selectedChapterId.toString().padStart(2, '0')}
             </div>
           </div>
 
-          <div className="flex justify-between items-end mb-8  border-[#1A1A1A] pb-4">
-            <h2 className="text-4xl font-bold text-[#1A1A1A]">
+          <div className="flex justify-between items-end mb-6 md:mb-8 border-[#1A1A1A] pb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1A1A1A]">
               {selectedChapter.title}
             </h2>
             <div className="flex gap-2">
@@ -70,13 +60,13 @@ export function ChapterContent({
           </div>
 
           <div className="relative">
-            <p className="text-2xl leading-loose text-[#2D2926] text-justify whitespace-pre-wrap tracking-wide first-letter:text-6xl first-letter:float-left first-letter:mr-4 first-letter:mt-2 first-letter:text-[#A63A2B] first-letter:font-bold">
+            <p className="text-xl md:text-2xl leading-loose text-[#2D2926] text-justify whitespace-pre-wrap tracking-wide first-letter:text-5xl md:first-letter:text-6xl first-letter:float-left first-letter:mr-3 md:first-letter:mr-4 first-letter:mt-1 md:first-letter:mt-2 first-letter:text-[#A63A2B] first-letter:font-bold">
               {selectedChapter.content}
             </p>
           </div>
 
           {/* Interpretation Area */}
-          <div className="mt-16 pt-8 border-t border-[#E2DED0]">
+          <div className="mt-10 md:mt-16 pt-6 md:pt-8 border-t border-[#E2DED0]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8C8471] font-sans flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-[#A63A2B] rounded-full" />
@@ -127,8 +117,7 @@ export function ChapterContent({
               </div>
             )}
           </div>
-        </motion.article>
-      </AnimatePresence>
+      </article>
     </section>
   );
 }

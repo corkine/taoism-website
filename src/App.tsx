@@ -10,7 +10,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to={`/${BOOKS[0].id}`} replace />} />
         {BOOKS.map(book => (
-          <Route path={`/${book.id}`} element={<BookPage bookId={book.id} />} />
+          <React.Fragment key={book.id}>
+            <Route path={`/${book.id}/:chapterId?`} element={<BookPage key={book.id} bookId={book.id} />} />
+          </React.Fragment>
         ))}
       </Routes>
     </HashRouter>
