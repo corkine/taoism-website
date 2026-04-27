@@ -96,6 +96,10 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
     localStorage.setItem(interpretationStorageKey, JSON.stringify(customInterpretations));
   }, [customInterpretations, interpretationStorageKey]);
 
+  useEffect(() => {
+    document.title = `道经释义 · ${bookConfig.title} 第 ${selectedChapterId} 章`;
+  }, [bookConfig.title, selectedChapterId]);
+
   const openEditMain = (sectionId?: string) => {
     if (sectionId) {
       const idx = mainSections.findIndex(s => s.id === sectionId);
