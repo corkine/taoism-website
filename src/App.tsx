@@ -4,59 +4,16 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ChapterContent } from './components/ChapterContent';
 import { Modals } from './components/Modals';
-
-const STORAGE_KEY = 'dao_jing_custom_partitions';
-
-const DEFAULT_PARTITIONS: MainSection[] = [
-  {
-    id: 'default-1',
-    title: '玄妙之门',
-    startChapter: 1,
-    endChapter: 15,
-    description: '',
-    subSections: [
-      { id: '1-1', title: '相生', startChapter: 1, endChapter: 3, description: '' },
-      { id: '1-2', title: '道冲', startChapter: 4, endChapter: 6, description: '' },
-      { id: '1-3', title: '无私', startChapter: 7, endChapter: 9, description: '' },
-      { id: '1-4', title: '为用', startChapter: 10, endChapter: 12, description: '' },
-      { id: '1-5', title: '玄通', startChapter: 13, endChapter: 15, description: '' },
-    ]
-  },
-  {
-    id: 'default-2',
-    title: '致虚守静',
-    startChapter: 16,
-    endChapter: 24,
-    description: '',
-    subSections: [
-      { id: '2-1', title: '贵言', startChapter: 16, endChapter: 18, description: '' },
-      { id: '2-2', title: '绝学', startChapter: 19, endChapter: 21, description: '' },
-      { id: '2-3', title: '抱一', startChapter: 22, endChapter: 24, description: '' },
-    ]
-  },
-  {
-    id: 'default-3',
-    title: '道法自然',
-    startChapter: 25,
-    endChapter: 37,
-    description: '',
-    subSections: [
-      { id: '3-1', title: '袭明', startChapter: 26, endChapter: 28, description: '' },
-      { id: '3-2', title: '去甚', startChapter: 29, endChapter: 31, description: '' },
-      { id: '3-3', title: '守朴', startChapter: 32, endChapter: 34, description: '' },
-      { id: '3-4', title: '执象', startChapter: 35, endChapter: 37, description: '' },
-    ]
-  }
-];
+import { LAOZI_STORAGE_KEY, LAOZI_DEFAULT_PARTITIONS, LAOZI_INTERPRETATION_STORAGE_KEY } from './data/storage';
 
 export default function App() {
   const [selectedChapterId, setSelectedChapterId] = useState<number>(1);
   const [mainSections, setMainSections] = useState<MainSection[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(LAOZI_STORAGE_KEY);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return DEFAULT_PARTITIONS; }
+      try { return JSON.parse(saved); } catch (e) { return LAOZI_DEFAULT_PARTITIONS; }
     }
-    return DEFAULT_PARTITIONS;
+    return LAOZI_DEFAULT_PARTITIONS;
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -66,7 +23,7 @@ export default function App() {
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
 
   const [customInterpretations, setCustomInterpretations] = useState<Record<number, string>>(() => {
-    const savedInt = localStorage.getItem('dao_jing_interpretations');
+    const savedInt = localStorage.getItem(LAOZI_INTERPRETATION_STORAGE_KEY);
     if (savedInt) {
       try { return JSON.parse(savedInt); } catch (e) { return {}; }
     }
@@ -94,12 +51,12 @@ export default function App() {
   // Save to LocalStorage
   useEffect(() => {
     if (mainSections.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(mainSections));
+      localStorage.setItem(LAOZI_STORAGE_KEY, JSON.stringify(mainSections));
     }
   }, [mainSections]);
 
   useEffect(() => {
-    localStorage.setItem('dao_jing_interpretations', JSON.stringify(customInterpretations));
+    localStorage.setItem(LAOZI_INTERPRETATION_STORAGE_KEY, JSON.stringify(customInterpretations));
   }, [customInterpretations]);
 
   const handleExport = () => {
@@ -111,7 +68,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "daodejing_config.json";
+    a.download = "daoism_partitions.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, Edit2 } from 'lucide-react';
-import { daoJing } from '../data/daoJing';
+import { laozi } from '../data/laozi';
 
 interface ChapterContentProps {
   selectedChapterId: number;
@@ -24,7 +24,7 @@ export function ChapterContent({
   tempInterpretation,
   setTempInterpretation
 }: ChapterContentProps) {
-  const selectedChapter = daoJing.find(c => c.id === selectedChapterId) || daoJing[0];
+  const selectedChapter = laozi.find(c => c.id === selectedChapterId) || laozi[0];
 
   return (
     <section className="flex-1">
