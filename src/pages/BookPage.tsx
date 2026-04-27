@@ -4,8 +4,10 @@ import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
 import { ChapterContent } from '../components/ChapterContent';
 import { Modals } from '../components/Modals';
+import { AIModal } from '../components/AIModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
+import { useAISettings } from '../hooks/useAISettings';
 
 export default function BookPage({ bookId, key }: { bookId: string; key?: string | number }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
@@ -54,6 +56,13 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
   const [editingLocId, setEditingLocId] = useState<number | null>(null);
   const [tempInterpretation, setTempInterpretation] = useState('');
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  // AI Modal state
+  const { settings: aiSettings, saveSettings: saveAISettings } = useAISettings();
+  // isAIOpen: modal is mounted (has content); isAIVisible: modal is shown on screen
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isAIVisible, setIsAIVisible] = useState(false);
+  const [aiSystemPrompt, setAISystemPrompt] = useState<string | undefined>(undefined);
 
   // Form State
   const [formMain, setFormMain] = useState<Omit<MainSection, 'id' | 'subSections'>>({
@@ -249,6 +258,11 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
             setEditingLocId={setEditingLocId}
             tempInterpretation={tempInterpretation}
             setTempInterpretation={setTempInterpretation}
+            onAskAI={(prompt) => {
+              setAISystemPrompt(prompt);
+              setIsAIOpen(true);
+              setIsAIVisible(true);
+            }}
           />
         </div>
       </main>
@@ -267,6 +281,16 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
         handleSaveSubSection={handleSaveSubSection}
         isAboutOpen={isAboutOpen}
         setIsAboutOpen={setIsAboutOpen}
+      />
+
+      {/* AI Floating Modal */}
+      <AIModal
+        isOpen={isAIOpen && isAIVisible}
+        onHide={() => setIsAIVisible(false)}
+        onClose={() => { setIsAIOpen(false); setIsAIVisible(false); }}
+        systemPrompt={aiSystemPrompt}
+        settings={aiSettings}
+        onSaveSettings={saveAISettings}
       />
 
       <style>{`
