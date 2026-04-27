@@ -52,7 +52,7 @@ jobs:
       - name: Run OSS Release
         id: transfer
         env:
-          ADMIN_OSS_DESTINATION: ${{ secrets.TAOISM_OSS_DESTINATION }}
+          TAOISM_OSS_DESTINATION: ${{ secrets.TAOISM_OSS_DESTINATION }}
         run: |
           wget https://static2.mazhangjing.com/dist/oss-uploader
           chmod +x oss-uploader
