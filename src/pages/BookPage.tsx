@@ -87,6 +87,35 @@ export default function BookPage({ bookId }: { bookId: string }) {
     document.title = `道经释义 · ${bookConfig.title} 第 ${selectedChapterId} 章`;
   }, [bookConfig.title, selectedChapterId]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't navigate if user is typing in an input or textarea
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        if (selectedChapterId > 1) {
+          e.preventDefault();
+          setSelectedChapterId(selectedChapterId - 1);
+        }
+      } else if (e.key === 'ArrowRight') {
+        if (selectedChapterId < chaptersCount) {
+          e.preventDefault();
+          setSelectedChapterId(selectedChapterId + 1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedChapterId, setSelectedChapterId, chaptersCount]);
+
   const openEditMain = (sectionId?: string) => {
     if (sectionId) {
       const idx = mainSections.findIndex(s => s.id === sectionId);
