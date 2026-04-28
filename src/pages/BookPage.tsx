@@ -10,7 +10,7 @@ import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
 import { useAISettings } from '../hooks/useAISettings';
 import { useWebDAVSync } from '../hooks/useWebDAVSync';
 
-export default function BookPage({ bookId, key }: { bookId: string; key?: string | number }) {
+export default function BookPage({ bookId }: { bookId: string }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
   const chaptersCount = bookConfig.content.length;
   const partitionsStorageKey = `${bookId}_${PARTITIONS_KEY}`;
@@ -254,6 +254,11 @@ export default function BookPage({ bookId, key }: { bookId: string; key?: string
           handleRemoveSection={handleRemoveSection}
           openEditSub={openEditSub}
           handleRemoveSubSection={handleRemoveSubSection}
+          annotatedChapterIds={new Set(
+            Object.entries(customInterpretations)
+              .filter(([, v]) => !!(v as string)?.trim())
+              .map(([k]) => Number(k))
+          )}
         />
 
         {/* Center Content Area */}
