@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useLayoutEffect, useEffect } from 'react';
 import { ChevronRight, Edit2, Bot } from 'lucide-react';
 import { Chapter } from '../types';
 
@@ -28,6 +28,23 @@ export function ChapterContent({
   setTempInterpretation,
   onAskAI,
 }: ChapterContentProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  };
+
+  // Use useLayoutEffect to ensure height is adjusted BEFORE the browser paints,
+  // preventing any visible "jump" or lag during typing.
+  useLayoutEffect(() => {
+    if (editingLocId === selectedChapterId) {
+      adjustHeight();
+    }
+  }, [tempInterpretation, editingLocId, selectedChapterId]);
   const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
   const handleAskAI = () => {
@@ -119,9 +136,10 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
 
           {editingLocId === selectedChapterId ? (
             <textarea
+              ref={textareaRef}
               value={tempInterpretation}
               onChange={e => setTempInterpretation(e.target.value)}
-              className="w-full h-40 p-6 bg-[#FDFBF7] border border-[#E2DED0] outline-none text-sm font-serif leading-relaxed focus:border-[#A63A2B] transition-colors resize-none shadow-inner"
+              className="w-full min-h-[160px] p-6 bg-[#FDFBF7] border border-[#E2DED0] outline-none text-sm font-serif leading-relaxed focus:border-[#A63A2B] transition-colors resize-none shadow-inner overflow-hidden"
               placeholder="谈谈您的见解..."
             />
           ) : (
