@@ -1,38 +1,35 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { NavLink } from 'react-router-dom';
-import { BOOKS, buildBackupData, restoreBackupData } from '../data/book';
+import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
-import { GlobalSyncStatus } from '../utils/webdav';
+import { useWebDAVSync } from '../hooks/useWebDAVSync';
+import { CloudOff } from 'lucide-react';
+import { isDirty as checkDirty, restoreBackupData, exportDataToFile } from '../utils/storage';
 
 interface HeaderProps {
   title: string;
   setIsAboutOpen: (isOpen: boolean) => void;
-  syncStatus?: GlobalSyncStatus;
-  syncMessage?: string;
-  lastSyncTime?: string | null;
 }
 
 export function Header({
   title,
   setIsAboutOpen,
-  syncStatus,
-  syncMessage,
-  lastSyncTime,
 }: HeaderProps) {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
+  const [isDirty, setIsDirty] = useState(checkDirty());
+  const { syncState, triggerUpload, triggerDownload } = useWebDAVSync();
+
+  useEffect(() => {
+    const handler = () => setIsDirty(checkDirty());
+    window.addEventListener('daoism-dirty-changed', handler);
+    // Also check on mount
+    setIsDirty(checkDirty());
+    return () => window.removeEventListener('daoism-dirty-changed', handler);
+  }, []);
 
   const handleGlobalExport = () => {
-    const data = buildBackupData(false);
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "daoism_all_data.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportDataToFile(false);
   };
 
   const handleGlobalImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +67,22 @@ export function Header({
         </div>
 
         <div className="w-full md:w-auto md:text-right mt-2 md:mt-0">
-          <div className="flex gap-3 md:gap-1 items-center justify-start md:justify-end mb-2 md:mb-1 flex-wrap">
+          <div className="flex gap-3 md:gap-1 items-center justify-start md:justify-end mb-2 md:mb-1 flex-wrap relative">
+            <AnimatePresence>
+              {isDirty && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  title="有本地未同步的变更"
+                  className="flex items-center gap-1.5 px-2 py-1 bg-[#A63A2B]/10 text-[#A63A2B] rounded-full mr-2"
+                >
+                  <CloudOff size={12} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest font-sans">本地变更</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
               关于
             </button>
@@ -84,10 +96,9 @@ export function Header({
               <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
             </label>
             <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
-            {/* Sync button with live status icon */}
             <button
               onClick={() => setIsWebDAVOpen(true)}
-              title={syncMessage || '点击打开在线备份面板'}
+              title={syncState.message || '点击打开在线备份面板'}
               className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1.5 py-1 rounded-sm"
             >
               备份
@@ -108,9 +119,11 @@ export function Header({
       <WebDAVSyncModal
         isOpen={isWebDAVOpen}
         onClose={() => setIsWebDAVOpen(false)}
-        globalSyncStatus={syncStatus}
-        globalSyncMessage={syncMessage}
-        globalLastSyncTime={lastSyncTime}
+        globalSyncStatus={syncState.status}
+        globalSyncMessage={syncState.message}
+        globalLastSyncTime={syncState.lastSyncTime}
+        onTriggerUpload={triggerUpload}
+        onTriggerDownload={triggerDownload}
       />
     </>
   );

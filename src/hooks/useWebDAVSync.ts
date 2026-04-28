@@ -1,20 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  WebDAVConfig,
-  GlobalSyncStatus,
-  loadWebDAVConfig,
   fetchRemoteData,
   pushBackupToRemote,
-  touchLocalWriteTime,
-  formatTime,
 } from '../utils/webdav';
-import { restoreBackupData } from '../data/book';
+import { formatTime } from '../utils/time';
+import { loadWebDAVConfig, restoreBackupData, clearDirty, touchLocalWriteTime } from '../utils/storage';
 
-export interface SyncState {
-  status: GlobalSyncStatus;
-  message: string;
-  lastSyncTime: string | null;
-}
+import { GlobalSyncStatus, SyncState, WebDAVConfig } from '../types';
 
 export interface UseWebDAVSyncReturn {
   syncState: SyncState;
@@ -46,6 +38,8 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
     try {
       const syncedAt = await pushBackupToRemote(cfg);
       touchLocalWriteTime();
+      clearDirty(); // Data is now safe on remote
+      console.log('syncedAt', syncedAt);
       setStatus('success', '上传成功', formatTime(syncedAt));
     } catch (e: any) {
       setStatus('error', e.message || '上传失败');
@@ -65,6 +59,7 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
       }
       restoreBackupData(data);
       touchLocalWriteTime();
+      clearDirty(); // Local data is now consistent with remote
       const t = data.syncedAt ? formatTime(data.syncedAt) : '';
       setStatus('success', '下载并恢复成功', t);
       return { needsReload: true };

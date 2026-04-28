@@ -1,6 +1,9 @@
-import { laozi } from "./laozi";
-import { zhuangzi, yinfujing } from "./zhuangzi";
-import { liezi } from "./liezi";
+
+// ─── Book registry (imported here to keep storage.ts self-contained) ─────────
+
+import { laozi } from './laozi';
+import { zhuangzi, yinfujing } from './zhuangzi';
+import { liezi } from './liezi';
 
 export const BOOKS = [
     {
@@ -94,52 +97,7 @@ export const BOOKS = [
     }
 ];
 
-export const INTERPRETATION_KEY = 'interpretation';
-export const PARTITIONS_KEY = 'partitions';
+// ─── Static text constants ────────────────────────────────────────────────────
 
 export const TRANS_NOTE = '本应用使用的《老子》原文主要参考自王弼本，并结合帛书本、竹简本等进行了部分校勘；《庄子》原文主要参考自郭象本，二者均经过了重新校对与标点整理。';
 export const COPY_NOTE = `本应用内置的《${BOOKS.map(b => b.title).join('》、《')}》等先秦典籍原文属于公有领域。本应用本身的界面设计、交互逻辑及提供的工具代码受版权保护。`;
-
-/**
- * Build a JSON object containing all local user data.
- * @param includeAI If true, includes AI configuration in the backup.
- */
-export function buildBackupData(includeAI: boolean = true) {
-    const booksData: Record<string, any> = {};
-    for (const book of BOOKS) {
-        booksData[book.id] = {
-            partitions: JSON.parse(localStorage.getItem(`${book.id}_${PARTITIONS_KEY}`) || 'null'),
-            interpretations: JSON.parse(localStorage.getItem(`${book.id}_${INTERPRETATION_KEY}`) || 'null'),
-        };
-    }
-    const data: any = {
-        version: 2,
-        type: 'daoism_backup',
-        syncedAt: new Date().toISOString(),
-        books: booksData,
-    };
-    if (includeAI) {
-        data.aiSettings = JSON.parse(localStorage.getItem('daoism_ai_settings') || 'null');
-    }
-    return data;
-}
-
-/**
- * Restore user data from a backup object to LocalStorage.
- */
-export function restoreBackupData(data: any) {
-    if (data.type !== 'daoism_backup' || !data.books) {
-        throw new Error('无法识别的备份文件格式');
-    }
-    for (const bookId of Object.keys(data.books)) {
-        if (data.books[bookId].partitions) {
-            localStorage.setItem(`${bookId}_${PARTITIONS_KEY}`, JSON.stringify(data.books[bookId].partitions));
-        }
-        if (data.books[bookId].interpretations) {
-            localStorage.setItem(`${bookId}_${INTERPRETATION_KEY}`, JSON.stringify(data.books[bookId].interpretations));
-        }
-    }
-    if (data.aiSettings) {
-        localStorage.setItem('daoism_ai_settings', JSON.stringify(data.aiSettings));
-    }
-}

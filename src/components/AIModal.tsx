@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useAIChat } from '../hooks/useAIChat';
 import { AISettingsModal } from './AISettingsModal';
-import type { AISettings } from '../hooks/useAISettings';
+import { useAISettings } from '../hooks/useAISettings';
 
 interface AIModalProps {
   isOpen: boolean;
@@ -25,8 +25,6 @@ interface AIModalProps {
   onClose: () => void;
   systemPrompt?: string;
   initialUserMessage?: string;
-  settings: AISettings;
-  onSaveSettings: (s: AISettings) => void;
 }
 
 /** Plain-text renderer: only handle line-breaks */
@@ -47,9 +45,8 @@ export function AIModal({
   onClose,
   systemPrompt,
   initialUserMessage,
-  settings,
-  onSaveSettings,
 }: AIModalProps) {
+  const { settings, saveSettings } = useAISettings();
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } =
     useAIChat(settings);
 
@@ -173,7 +170,7 @@ export function AIModal({
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
-        onSave={onSaveSettings}
+        onSave={saveSettings}
       />
 
       {/* Main floating modal */}

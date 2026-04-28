@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import type { AISettings } from './useAISettings';
+import { AISettings } from '../types';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -94,7 +94,7 @@ export function useAIChat(settings: AISettings) {
                     return copy;
                   });
                 }
-              } catch {}
+              } catch { }
             }
           }
         }

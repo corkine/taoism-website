@@ -1,10 +1,6 @@
 import { useState, useCallback } from 'react';
-
-export interface AISettings {
-  endpoint: string;
-  apiKey: string;
-  model: string;
-}
+import { loadAISettings, saveAISettings } from '../utils/storage';
+import { AISettings } from '../types';
 
 export const AI_PRESETS = {
   aliyun: {
@@ -44,8 +40,6 @@ export const AI_PRESETS = {
   }
 } as const;
 
-const STORAGE_KEY = 'daoism_ai_settings';
-
 const DEFAULT_SETTINGS: AISettings = {
   endpoint: '',
   apiKey: '',
@@ -53,19 +47,13 @@ const DEFAULT_SETTINGS: AISettings = {
 };
 
 export function useAISettings() {
-  const [settings, setSettingsState] = useState<AISettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
-    } catch { }
-    return DEFAULT_SETTINGS;
-  });
+  const [settings, setSettingsState] = useState<AISettings>(() =>
+    loadAISettings(DEFAULT_SETTINGS)
+  );
 
   const saveSettings = useCallback((next: AISettings) => {
     setSettingsState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch { }
+    saveAISettings(next);
   }, []);
 
   return { settings, saveSettings };

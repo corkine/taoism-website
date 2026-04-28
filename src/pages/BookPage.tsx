@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MainSection, SubSection } from '../types';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
@@ -6,15 +6,12 @@ import { ChapterContent } from '../components/ChapterContent';
 import { Modals } from '../components/Modals';
 import { AIModal } from '../components/AIModal';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BOOKS, PARTITIONS_KEY, INTERPRETATION_KEY } from '../data/book';
-import { useAISettings } from '../hooks/useAISettings';
-import { useWebDAVSync } from '../hooks/useWebDAVSync';
+import { BOOKS } from '../data/book';
+import { loadPartitions, savePartitions, loadInterpretations, saveInterpretations, markDirty } from '../utils/storage';
 
 export default function BookPage({ bookId }: { bookId: string }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
   const chaptersCount = bookConfig.content.length;
-  const partitionsStorageKey = `${bookId}_${PARTITIONS_KEY}`;
-  const interpretationStorageKey = `${bookId}_${INTERPRETATION_KEY}`;
 
   const { chapterId } = useParams();
   const navigate = useNavigate();
@@ -33,13 +30,9 @@ export default function BookPage({ bookId }: { bookId: string }) {
     }
     navigate(`/${bookId}/${newId}`);
   };
-  const [mainSections, setMainSections] = useState<MainSection[]>(() => {
-    const saved = localStorage.getItem(partitionsStorageKey);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return bookConfig.defaultPartitions; }
-    }
-    return bookConfig.defaultPartitions;
-  });
+  const [mainSections, setMainSections] = useState<MainSection[]>(() =>
+    loadPartitions(bookId, bookConfig.defaultPartitions)
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -47,26 +40,19 @@ export default function BookPage({ bookId }: { bookId: string }) {
   const [editingSubParentId, setEditingSubParentId] = useState<string | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
 
-  const [customInterpretations, setCustomInterpretations] = useState<Record<number, string>>(() => {
-    const savedInt = localStorage.getItem(interpretationStorageKey);
-    if (savedInt) {
-      try { return JSON.parse(savedInt); } catch (e) { return {}; }
-    }
-    return {};
-  });
+  const [customInterpretations, setCustomInterpretations] = useState<Record<number, string>>(() =>
+    loadInterpretations(bookId)
+  );
   const [editingLocId, setEditingLocId] = useState<number | null>(null);
   const [tempInterpretation, setTempInterpretation] = useState('');
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   // AI Modal state
-  const { settings: aiSettings, saveSettings: saveAISettings } = useAISettings();
   // isAIOpen: modal is mounted (has content); isAIVisible: modal is shown on screen
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isAIVisible, setIsAIVisible] = useState(false);
   const [aiSystemPrompt, setAISystemPrompt] = useState<string | undefined>(undefined);
 
-  // WebDAV manual sync
-  const { syncState, triggerUpload, triggerDownload } = useWebDAVSync();
 
   // Form State
   const [formMain, setFormMain] = useState<Omit<MainSection, 'id' | 'subSections'>>({
@@ -84,21 +70,18 @@ export default function BookPage({ bookId }: { bookId: string }) {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem(partitionsStorageKey);
-    setMainSections(saved ? JSON.parse(saved) : bookConfig.defaultPartitions);
-
-    const savedInt = localStorage.getItem(interpretationStorageKey);
-    setCustomInterpretations(savedInt ? JSON.parse(savedInt) : {});
-  }, [bookId, bookConfig.defaultPartitions, partitionsStorageKey, interpretationStorageKey]);
+    setMainSections(loadPartitions(bookId, bookConfig.defaultPartitions));
+    setCustomInterpretations(loadInterpretations(bookId));
+  }, [bookId, bookConfig.defaultPartitions]);
 
   // Save to LocalStorage
   useEffect(() => {
-    localStorage.setItem(partitionsStorageKey, JSON.stringify(mainSections));
-  }, [mainSections, partitionsStorageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    savePartitions(bookId, mainSections);
+  }, [mainSections, bookId]);
 
   useEffect(() => {
-    localStorage.setItem(interpretationStorageKey, JSON.stringify(customInterpretations));
-  }, [customInterpretations, interpretationStorageKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    saveInterpretations(bookId, customInterpretations);
+  }, [customInterpretations, bookId]);
 
   useEffect(() => {
     document.title = `道经释义 · ${bookConfig.title} 第 ${selectedChapterId} 章`;
@@ -149,11 +132,13 @@ export default function BookPage({ bookId }: { bookId: string }) {
     }
     newSections.sort((a, b) => a.startChapter - b.startChapter);
     setMainSections(newSections);
+    markDirty();
     setIsEditing(false);
   };
 
   const handleRemoveSection = (id: string) => {
     setMainSections(mainSections.filter(s => s.id !== id));
+    markDirty();
   };
 
   const openEditSub = (parentId: string, subId?: string) => {
@@ -217,6 +202,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
     newSections[pIndex] = parent;
 
     setMainSections(newSections);
+    markDirty();
     setIsEditingSub(false);
   };
 
@@ -230,6 +216,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
       }
       return section;
     }));
+    markDirty();
   };
 
   return (
@@ -238,9 +225,6 @@ export default function BookPage({ bookId }: { bookId: string }) {
       <Header
         title={bookConfig.title}
         setIsAboutOpen={setIsAboutOpen}
-        syncStatus={syncState.status}
-        syncMessage={syncState.message}
-        lastSyncTime={syncState.lastSyncTime}
       />
 
       <main className="mt-6 md:mt-8 px-6 md:px-12 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-10">
@@ -269,7 +253,10 @@ export default function BookPage({ bookId }: { bookId: string }) {
             selectedChapterId={selectedChapterId}
             setSelectedChapterId={setSelectedChapterId}
             customInterpretations={customInterpretations}
-            setCustomInterpretations={setCustomInterpretations}
+            setCustomInterpretations={(newVal) => {
+              setCustomInterpretations(newVal);
+              markDirty();
+            }}
             editingLocId={editingLocId}
             setEditingLocId={setEditingLocId}
             tempInterpretation={tempInterpretation}
@@ -305,8 +292,6 @@ export default function BookPage({ bookId }: { bookId: string }) {
         onHide={() => setIsAIVisible(false)}
         onClose={() => { setIsAIOpen(false); setIsAIVisible(false); }}
         systemPrompt={aiSystemPrompt}
-        settings={aiSettings}
-        onSaveSettings={saveAISettings}
       />
 
       <style>{`

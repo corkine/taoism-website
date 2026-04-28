@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings } from 'lucide-react';
 import {
-  WebDAVConfig,
-  GlobalSyncStatus,
-  WEBDAV_CONFIG_KEY,
   WEBDAV_REMOTE_PATH,
-  formatTime,
   fetchRemoteData,
-  pushBackupToRemote,
-  loadWebDAVConfig,
 } from '../utils/webdav';
-import { restoreBackupData } from '../data/book';
+import { formatTime } from '../utils/time';
+import { WEBDAV_CONFIG_KEY, loadWebDAVConfig } from '../utils/storage';
+import { WebDAVConfig, GlobalSyncStatus } from '../types';
 
 type ModalSyncStatus =
   | { type: 'idle' }
@@ -21,8 +17,8 @@ type ModalSyncStatus =
 interface WebDAVSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadSuccess?: (time: string) => void;
-  onDownloadSuccess?: () => void;
+  onTriggerUpload?: () => Promise<void>;
+  onTriggerDownload?: () => Promise<{ needsReload: boolean }>;
   globalSyncStatus?: GlobalSyncStatus;
   globalSyncMessage?: string;
   globalLastSyncTime?: string | null;
@@ -31,8 +27,8 @@ interface WebDAVSyncModalProps {
 export function WebDAVSyncModal({
   isOpen,
   onClose,
-  onUploadSuccess,
-  onDownloadSuccess,
+  onTriggerUpload,
+  onTriggerDownload,
   globalSyncStatus,
   globalSyncMessage,
   globalLastSyncTime,
@@ -41,6 +37,17 @@ export function WebDAVSyncModal({
   const [status, setStatus] = useState<ModalSyncStatus>({ type: 'idle' });
   const [remoteInfo, setRemoteInfo] = useState<{ syncedAt?: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Sync modal local status with global status if global is active
+  useEffect(() => {
+    if (globalSyncStatus === 'syncing') {
+      setStatus({ type: 'loading', message: globalSyncMessage || '正在同步…' });
+    } else if (globalSyncStatus === 'success') {
+      setStatus({ type: 'success', message: globalSyncMessage || '成功', time: globalLastSyncTime || '' });
+    } else if (globalSyncStatus === 'error') {
+      setStatus({ type: 'error', message: globalSyncMessage || '失败' });
+    }
+  }, [globalSyncStatus, globalSyncMessage, globalLastSyncTime]);
 
   // Unified draft: server config
   const [draftServer, setDraftServer] = useState<WebDAVConfig>({ url: '', username: '', password: '' });
@@ -95,34 +102,17 @@ export function WebDAVSyncModal({
   }, []);
 
   const handleUpload = async () => {
-    setStatus({ type: 'loading', message: '正在上传数据…' });
-    try {
-      const syncedAt = await pushBackupToRemote(config);
-      const t = formatTime(syncedAt);
-      setStatus({ type: 'success', message: '上传成功', time: t });
-      setRemoteInfo({ syncedAt });
-      onUploadSuccess?.(t);
-    } catch (e: any) {
-      setStatus({ type: 'error', message: e.message || '上传失败' });
+    if (onTriggerUpload) {
+      await onTriggerUpload();
     }
   };
 
   const handleDownload = async () => {
-    setStatus({ type: 'loading', message: '正在下载数据…' });
-    try {
-      const data = await fetchRemoteData(config);
-      if (!data) {
-        setStatus({ type: 'error', message: '远程尚无备份文件，请先上传' });
-        return;
+    if (onTriggerDownload) {
+      const { needsReload } = await onTriggerDownload();
+      if (needsReload) {
+        setTimeout(() => window.location.reload(), 1500);
       }
-      restoreBackupData(data);
-      const t = data.syncedAt ? formatTime(data.syncedAt) : '';
-      setStatus({ type: 'success', message: '下载并恢复成功，即将刷新页面…', time: t });
-      setRemoteInfo({ syncedAt: data.syncedAt });
-      onDownloadSuccess?.();
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (e: any) {
-      setStatus({ type: 'error', message: e.message || '下载失败' });
     }
   };
 

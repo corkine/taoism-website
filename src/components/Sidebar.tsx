@@ -63,6 +63,10 @@ export function Sidebar({
                 if (hasAnnotation) {
                   itemClasses += ' ' + ringColors[sectionIndex % ringColors.length];
                 }
+              } else {
+                if (hasAnnotation) {
+                  itemClasses += ' ring-1 ring-inset ring-[#A63A2B]/40';
+                }
               }
             }
 
