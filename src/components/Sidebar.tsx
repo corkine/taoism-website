@@ -149,29 +149,40 @@ ${annotation ? `【用户批注】\n${annotation}` : ''}`;
                   </span>
 
                   <div className="relative flex items-center justify-end min-w-[60px]">
-                    <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap group-hover:opacity-0 transition-opacity">
-                      CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
-                    </span>
-                    <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleAskAI(section.title, section.startChapter, section.endChapter)}
-                        className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
-                        title="问 AI"
-                      >
-                        <AtSign size={12} />
-                      </button>
-                      <button
-                        onClick={() => openEditMain(section.id)}
-                        className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                      <button
-                        onClick={() => handleRemoveSection(section.id)}
-                        className="text-[#8C8471] hover:text-red-800 transition-all p-1"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                    <div className="relative group/ch-range">
+                      <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap group-hover/ch-range:opacity-0 transition-opacity cursor-default">
+                        CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
+                      </span>
+                      <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover/ch-range:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAskAI(section.title, section.startChapter, section.endChapter);
+                          }}
+                          className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
+                          title="问 AI"
+                        >
+                          <AtSign size={12} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditMain(section.id);
+                          }}
+                          className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveSection(section.id);
+                          }}
+                          className="text-[#8C8471] hover:text-red-800 transition-all p-1"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
