@@ -105,29 +105,29 @@ export function Sidebar({
             return (
               <div key={section.id} className="group relative">
                 <div className="flex justify-between items-center text-sm border-b border-[#E2DED0] pb-1 hover:border-[#A63A2B] transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className={`font-bold transition-colors ${isActiveMainSection ? 'text-[#A63A2B]' : 'text-[#1A1A1A]'
-                      }`}>
-                      {idx + 1}. {section.title}
+                  <span className={`font-bold transition-colors ${isActiveMainSection ? 'text-[#A63A2B]' : 'text-[#1A1A1A]'}`}>
+                    {idx + 1}. {section.title}
+                  </span>
+                  
+                  <div className="relative flex items-center justify-end min-w-[60px]">
+                    <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap group-hover:opacity-0 transition-opacity">
+                      CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
                     </span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => openEditMain(section.id)}
-                        className="text-stone-300 hover:text-[#A63A2B] transition-all p-1"
+                        className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
                       >
                         <Edit2 size={12} />
                       </button>
                       <button
                         onClick={() => handleRemoveSection(section.id)}
-                        className="text-stone-300 hover:text-red-800 transition-all p-1"
+                        className="text-[#8C8471] hover:text-red-800 transition-all p-1"
                       >
                         <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
-                  <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap ml-4">
-                    CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
-                  </span>
                 </div>
 
                 {section.description && (
@@ -154,20 +154,20 @@ export function Sidebar({
                           >
                             {idx + 1}.{sIdx + 1} {sub.title}
                           </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-sans text-[#8C8471]">
+                          <div className="relative flex items-center justify-end min-w-[32px]">
+                            <span className="text-[10px] font-sans text-[#8C8471] group-hover/sub:opacity-0 transition-opacity">
                               {sub.startChapter}-{sub.endChapter}
                             </span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                            <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
                               <button
                                 onClick={() => openEditSub(section.id, sub.id)}
-                                className="text-stone-300 hover:text-[#A63A2B] transition-all p-0.5"
+                                className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-0.5"
                               >
                                 <Edit2 size={10} />
                               </button>
                               <button
                                 onClick={() => handleRemoveSubSection(section.id, sub.id)}
-                                className="text-stone-300 hover:text-red-800 transition-all p-0.5"
+                                className="text-[#8C8471] hover:text-red-800 transition-all p-0.5"
                               >
                                 <Trash2 size={10} />
                               </button>

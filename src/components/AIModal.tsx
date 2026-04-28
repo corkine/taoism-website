@@ -12,6 +12,7 @@ import {
   Square,
   Bot,
   User,
+  Minus,
 } from 'lucide-react';
 import { useAIChat } from '../hooks/useAIChat';
 import { AISettingsModal } from './AISettingsModal';
@@ -238,9 +239,7 @@ export function AIModal({
               className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#1A1A1A] transition-colors rounded"
             >
               {/* Chevron-down as "hide" affordance */}
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M2 4.5L6.5 9L11 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <Minus size={14} />
             </button>
             {/* Close button: clears messages + closes */}
             <button

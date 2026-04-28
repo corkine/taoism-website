@@ -89,7 +89,7 @@ export function Modals({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] block">描述</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] block">主题描述</label>
                   <textarea
                     value={formMain.description}
                     onChange={e => setFormMain({ ...formMain, description: e.target.value })}

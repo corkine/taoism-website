@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, ExternalLink } from 'lucide-react';
-import type { AISettings } from '../hooks/useAISettings';
 import { AI_PRESETS } from '../hooks/useAISettings';
+import type { AISettings } from '../types';
 
 interface AISettingsModalProps {
   isOpen: boolean;
