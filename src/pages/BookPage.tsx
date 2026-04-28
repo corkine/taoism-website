@@ -272,6 +272,14 @@ export default function BookPage({ bookId }: { bookId: string }) {
               .filter(([, v]) => !!(v as string)?.trim())
               .map(([k]) => Number(k))
           )}
+          chapters={bookConfig.content}
+          customInterpretations={customInterpretations}
+          onAskAI={(prompt) => {
+            setAISystemPrompt(prompt);
+            setIsAIOpen(true);
+            setIsAIVisible(true);
+          }}
+          bookTitle={bookConfig.title}
         />
 
         {/* Center Content Area */}

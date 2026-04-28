@@ -1,6 +1,5 @@
-import React from 'react';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
-import { MainSection } from '../types';
+import { Plus, Trash2, Edit2, AtSign } from 'lucide-react';
+import { MainSection, Chapter } from '../types';
 
 interface SidebarProps {
   chaptersCount: number;
@@ -12,6 +11,10 @@ interface SidebarProps {
   openEditSub: (parentId: string, subId?: string) => void;
   handleRemoveSubSection: (parentId: string, subId: string) => void;
   annotatedChapterIds: Set<number>;
+  chapters: Chapter[];
+  customInterpretations: Record<number, string>;
+  onAskAI?: (systemPrompt: string) => void;
+  bookTitle: string;
 }
 
 const colors = [
@@ -41,8 +44,44 @@ export function Sidebar({
   handleRemoveSection,
   openEditSub,
   handleRemoveSubSection,
-  annotatedChapterIds
+  onAskAI,
+  chapters,
+  customInterpretations,
+  annotatedChapterIds,
+  bookTitle
 }: SidebarProps) {
+  const handleAskAI = (title: string, start: number, end: number) => {
+    if (!onAskAI) return;
+
+    const relevantChapters = chapters.filter(c => c.id >= start && c.id <= end);
+
+    // Global structure description
+    const structureText = mainSections.map((ms, i) => {
+      const subs = ms.subSections.map((ss, j) => `    - ${i + 1}.${j + 1} ${ss.title} (CH ${ss.startChapter}-${ss.endChapter})`).join('\n');
+      return `- ${i + 1}. ${ms.title} (CH ${ms.startChapter}-${ms.endChapter})${subs ? '\n' + subs : ''}`;
+    }).join('\n');
+
+    const prompt = `你是一位精通中国古典哲学的学者，尤其擅长道家经典。
+用户正在阅读《${bookTitle}》，当前关注的划分范围是：【${title}】（第 ${start} 至 ${end} 章）。
+
+为了提供准确的讨论，以下是本书当前的整体划分结构：
+${structureText}
+
+以下是当前关注范围（${title}）内的详细章节内容及用户的批注：
+
+${relevantChapters.map(c => {
+      const annotation = customInterpretations[c.id];
+      return `--- 第 ${c.id} 章：${c.title} ---
+【原文】
+${c.content}
+${annotation ? `【用户批注】\n${annotation}` : ''}`;
+    }).join('\n\n')}
+
+请根据以上整体结构和详细内容，为用户提供深度的讨论与见解。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。`;
+
+    onAskAI(prompt);
+  };
+
   return (
     <aside className="lg:col-span-3 flex flex-col gap-6">
       {/* Chapter Quick Grid */}
@@ -108,12 +147,19 @@ export function Sidebar({
                   <span className={`font-bold transition-colors ${isActiveMainSection ? 'text-[#A63A2B]' : 'text-[#1A1A1A]'}`}>
                     {idx + 1}. {section.title}
                   </span>
-                  
+
                   <div className="relative flex items-center justify-end min-w-[60px]">
                     <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap group-hover:opacity-0 transition-opacity">
                       CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
                     </span>
                     <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleAskAI(section.title, section.startChapter, section.endChapter)}
+                        className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
+                        title="问 AI"
+                      >
+                        <AtSign size={12} />
+                      </button>
                       <button
                         onClick={() => openEditMain(section.id)}
                         className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
@@ -159,6 +205,13 @@ export function Sidebar({
                               {sub.startChapter}-{sub.endChapter}
                             </span>
                             <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleAskAI(sub.title, sub.startChapter, sub.endChapter)}
+                                className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-0.5"
+                                title="问 AI"
+                              >
+                                <AtSign size={10} />
+                              </button>
                               <button
                                 onClick={() => openEditSub(section.id, sub.id)}
                                 className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-0.5"
