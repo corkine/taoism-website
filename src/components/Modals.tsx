@@ -244,7 +244,9 @@ export function Modals({
               </div>
 
               <div className="mt-8 pt-6 border-t border-[#E2DED0] flex justify-between items-center text-xs text-[#8C8471] font-sans">
-                <span>© {new Date().getFullYear()} {author} </span>
+                <span>
+                  © {new Date().getFullYear()} <a className="hover:text-[#1A1A1A]" href="https://mvst.mazhangjing.com" target="_blank" rel="noopener noreferrer">{author}</a> <a className="hover:text-[#1A1A1A]" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">鄂ICP备17002041号-1</a>
+                </span>
                 <span>{version}</span>
               </div>
             </motion.div>
