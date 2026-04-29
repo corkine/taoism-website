@@ -294,6 +294,7 @@ export function WebDAVSyncModal({
               </div>
             )}
 
+            {/* 视觉平衡，上传到云端不使用边框，双向同步加一个细边框 */}
             <div>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -317,12 +318,11 @@ export function WebDAVSyncModal({
               <button
                 onClick={handleSync}
                 disabled={status.type === 'loading'}
-                className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-ink-header transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 border-1 border-transparent bg-brand text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-ink-header transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ArrowUpDown size={13} />
                 双向同步
               </button>
-
 
             </div>
 

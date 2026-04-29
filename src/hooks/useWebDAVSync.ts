@@ -4,7 +4,7 @@ import {
   pushBackupToRemote,
 } from '../utils/webdav';
 import { formatTime } from '../utils/time';
-import { loadWebDAVConfig, restoreBackupData, clearDirty, touchLocalWriteTime, buildBackupData, mergeBackupData, isDirty } from '../utils/storage';
+import { loadWebDAVConfig, restoreBackupData, clearDirty, touchLocalWriteTime, buildBackupData, mergeBackupData, isDirty, getRemoteSyncTime, saveRemoteSyncTime } from '../utils/storage';
 
 import { GlobalSyncStatus, SyncState, WebDAVConfig } from '../types';
 
@@ -39,6 +39,7 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
     setStatus('syncing', '正在上传数据…');
     try {
       const syncedAt = await pushBackupToRemote(cfg);
+      saveRemoteSyncTime(syncedAt);
       touchLocalWriteTime();
       clearDirty(); // Data is now safe on remote
       setStatus('success', '上传成功', formatTime(syncedAt));
@@ -59,6 +60,7 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
         return { needsReload: false };
       }
       restoreBackupData(data);
+      saveRemoteSyncTime(data.syncedAt);
       touchLocalWriteTime();
       clearDirty(); // Local data is now consistent with remote
       const t = data.syncedAt ? formatTime(data.syncedAt) : '';
@@ -87,6 +89,16 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
       const remoteData = await fetchRemoteData(cfg);
       if (!remoteData) {
         // No remote data, just upload local
+        await triggerUpload();
+        return { needsConfirm: false };
+      }
+
+      // Check if remote has changed since our last sync
+      const lastRemoteTime = getRemoteSyncTime();
+      const currentRemoteTime = remoteData.syncedAt;
+
+      if (lastRemoteTime && currentRemoteTime && currentRemoteTime <= lastRemoteTime) {
+        // Remote hasn't changed, we can safely overwrite it with our local changes
         await triggerUpload();
         return { needsConfirm: false };
       }
@@ -122,6 +134,7 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
     try {
       await pushBackupToRemote(cfg, mergedData);
       restoreBackupData(mergedData);
+      saveRemoteSyncTime(mergedData.syncedAt);
       touchLocalWriteTime();
       clearDirty();
       setStatus('success', '同步成功', formatTime(mergedData.syncedAt));

@@ -72,6 +72,9 @@ export const LOCAL_LAST_WRITE_KEY = 'daoism_local_last_write';
 /** AI assistant configuration. */
 export const AI_SETTINGS_KEY = 'daoism_ai_settings';
 
+/** The syncedAt timestamp of the remote file when we last successfully synced. */
+export const REMOTE_LAST_SYNC_KEY = 'daoism_remote_last_sync';
+
 /**
  * "Dirty flag" key.
  *
@@ -150,6 +153,22 @@ export function touchLocalWriteTime(): void {
 /** Returns the ISO timestamp of the last local write, or null. */
 export function getLocalWriteTime(): string | null {
     return localStorage.getItem(LOCAL_LAST_WRITE_KEY);
+}
+
+// ─── Remote sync-time (conflict detection) ────────────────────────────────────
+
+/** Save the syncedAt timestamp of the remote data we just pulled or pushed. */
+export function saveRemoteSyncTime(time: string | null): void {
+    if (time) {
+        localStorage.setItem(REMOTE_LAST_SYNC_KEY, time);
+    } else {
+        localStorage.removeItem(REMOTE_LAST_SYNC_KEY);
+    }
+}
+
+/** Returns the last known remote sync timestamp. */
+export function getRemoteSyncTime(): string | null {
+    return localStorage.getItem(REMOTE_LAST_SYNC_KEY);
 }
 
 // ─── Backup / Restore ─────────────────────────────────────────────────────────
