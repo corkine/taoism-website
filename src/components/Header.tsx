@@ -4,7 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
 import { useWebDAVSync } from '../hooks/useWebDAVSync';
-import { CloudOff } from 'lucide-react';
+import { CloudUpload } from 'lucide-react';
 import { isDirty as checkDirty, restoreBackupData, exportDataToFile } from '../utils/storage';
 
 interface HeaderProps {
@@ -18,7 +18,7 @@ export function Header({
 }: HeaderProps) {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(checkDirty());
-  const { syncState, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
+  const { syncState, webdavConfig, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
 
   useEffect(() => {
     const handler = () => setIsDirty(checkDirty());
@@ -30,6 +30,14 @@ export function Header({
 
   const handleGlobalExport = () => {
     exportDataToFile(false);
+  };
+
+  const handleDirtySync = async () => {
+    if (!webdavConfig) {
+      alert('请先配置 WebDAV 以触发同步或者导出备份数据以清空此标记。');
+      return;
+    }
+    await triggerSync();
   };
 
   const handleGlobalImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,10 +82,11 @@ export function Header({
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.5 }}
-                  title="有本地未同步的变更"
-                  className="flex items-center gap-1.5 px-2 py-1 bg-brand/10 text-brand rounded-full mr-2"
+                  title="有本地未同步的变更，点击同步"
+                  className="cursor-pointer flex items-center gap-1.5 px-2 py-1 bg-brand/10 text-brand rounded-full mr-2 cursor-pointer"
+                  onClick={handleDirtySync}
                 >
-                  <CloudOff size={12} />
+                  <CloudUpload size={12} />
                   <span className="text-[10px] font-bold uppercase tracking-widest font-sans">本地变更</span>
                 </motion.div>
               )}
