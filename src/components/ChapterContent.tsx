@@ -60,30 +60,30 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
 
   return (
     <section className="flex-1">
-      <article className="relative bg-white border border-border-subtle p-6 md:p-12 shadow-sm min-h-[500px]">
+      <article className="relative bg-white border border-[#E2DED0] p-6 md:p-12 shadow-sm min-h-[500px]">
         <div className="hidden md:flex absolute -left-4 top-12 flex-col items-center gap-2">
-          <div className="text-[10px] text-brand font-bold font-sans rotate-180 writing-vertical-rl tracking-widest uppercase">Chapter</div>
-          <div className="bg-ink-header text-white w-8 h-8 flex items-center justify-center text-xs font-sans font-bold">
+          <div className="text-[10px] text-[#A63A2B] font-bold font-sans rotate-180 writing-vertical-rl tracking-widest uppercase">Chapter</div>
+          <div className="bg-[#1A1A1A] text-white w-8 h-8 flex items-center justify-center text-xs font-sans font-bold">
             {selectedChapterId.toString().padStart(2, '0')}
           </div>
         </div>
 
-        <div className="flex justify-between items-end mb-6 md:mb-8 border-ink-header pb-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-ink-header">
+        <div className="flex justify-between items-end mb-6 md:mb-8 border-[#1A1A1A] pb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1A1A1A]">
             {selectedChapter.title}
           </h2>
           <div className="flex gap-2 items-center">
             <button
               disabled={selectedChapterId <= 1}
               onClick={() => setSelectedChapterId(id => Math.max(1, typeof id === 'number' ? id - 1 : id - 1))}
-              className="w-8 h-8 border border-border-subtle rounded-full flex items-center justify-center text-ink-muted hover:text-ink-header hover:border-ink-header disabled:opacity-30 transition-colors"
+              className="w-8 h-8 border border-[#E2DED0] rounded-full flex items-center justify-center text-[#8C8471] hover:text-[#1A1A1A] hover:border-[#1A1A1A] disabled:opacity-30 transition-colors"
             >
               <ChevronRight size={16} className="rotate-180" />
             </button>
             <button
               disabled={selectedChapterId >= 81}
               onClick={() => setSelectedChapterId(id => Math.min(81, typeof id === 'number' ? id + 1 : id + 1))}
-              className="w-8 h-8 border border-border-subtle rounded-full flex items-center justify-center text-ink-muted hover:text-ink-header hover:border-ink-header disabled:opacity-30 transition-colors"
+              className="w-8 h-8 border border-[#E2DED0] rounded-full flex items-center justify-center text-[#8C8471] hover:text-[#1A1A1A] hover:border-[#1A1A1A] disabled:opacity-30 transition-colors"
             >
               <ChevronRight size={16} />
             </button>
@@ -91,16 +91,16 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
         </div>
 
         <div className="relative">
-          <p className="text-xl md:text-2xl leading-loose text-ink text-justify whitespace-pre-wrap tracking-wide first-letter:text-5xl md:first-letter:text-6xl first-letter:float-left first-letter:mr-3 md:first-letter:mr-4 first-letter:mt-1 md:first-letter:mt-2 first-letter:text-brand first-letter:font-bold">
+          <p className="text-xl md:text-2xl leading-loose text-[#2D2926] text-justify whitespace-pre-wrap tracking-wide first-letter:text-5xl md:first-letter:text-6xl first-letter:float-left first-letter:mr-3 md:first-letter:mr-4 first-letter:mt-1 md:first-letter:mt-2 first-letter:text-[#A63A2B] first-letter:font-bold">
             {selectedChapter.content}
           </p>
         </div>
 
         {/* Interpretation Area */}
-        <div className="mt-10 md:mt-16 pt-6 md:pt-8 border-t border-border-subtle">
+        <div className="mt-10 md:mt-16 pt-6 md:pt-8 border-t border-[#E2DED0]">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-ink-muted font-sans flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-brand" rounded-full />
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8C8471] font-sans flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-[#A63A2B]" rounded-full />
               释义
             </h3>
             {editingLocId !== selectedChapterId ? (
@@ -109,13 +109,13 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
                   setEditingLocId(selectedChapterId);
                   setTempInterpretation(customInterpretations[selectedChapterId] || '');
                 }}
-                className="text-xs text-brand hover:underline font-sans font-bold flex items-center gap-1"
+                className="text-xs text-[#A63A2B] hover:underline font-sans font-bold flex items-center gap-1"
               >
                 <Edit2 size={10} /> 编辑
               </button>
             ) : (
               <div className="flex gap-4">
-                <button onClick={() => setEditingLocId(null)} className="text-[10px] uppercase font-bold text-ink-muted hover:text-ink-header transition-colors font-sans">
+                <button onClick={() => setEditingLocId(null)} className="text-[10px] uppercase font-bold text-[#8C8471] hover:text-[#1A1A1A] transition-colors font-sans">
                   取消
                 </button>
                 <button
@@ -123,7 +123,7 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
                     setCustomInterpretations(prev => ({ ...prev, [selectedChapterId]: tempInterpretation }));
                     setEditingLocId(null);
                   }}
-                  className="text-[10px] uppercase tracking-widest font-bold text-white bg-ink-header hover:bg-brand transition-colors px-3 py-1.5 font-sans"
+                  className="text-[10px] uppercase tracking-widest font-bold text-white bg-[#1A1A1A] hover:bg-[#A63A2B] transition-colors px-3 py-1.5 font-sans"
                 >
                   保存
                 </button>
@@ -136,15 +136,15 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
               ref={textareaRef}
               value={tempInterpretation}
               onChange={e => setTempInterpretation(e.target.value)}
-              className="w-full min-h-[160px] p-6 bg-paper border border-border-subtle outline-none text-sm font-serif leading-relaxed focus:border-brand transition-colors resize-none shadow-inner overflow-hidden"
+              className="w-full min-h-[160px] p-6 bg-[#FDFBF7] border border-[#E2DED0] outline-none text-sm font-serif leading-relaxed focus:border-[#A63A2B] transition-colors resize-none shadow-inner overflow-hidden"
               placeholder="谈谈您的见解..."
             />
           ) : (
-            <div className="text-[13px] text-ink-sub leading-loose whitespace-pre-wrap px-4 border-l-2 border-border-subtle italic">
+            <div className="text-[13px] text-[#3D3D3D] leading-loose whitespace-pre-wrap px-4 border-l-2 border-[#E2DED0] italic">
               {customInterpretations[selectedChapterId] ? (
                 customInterpretations[selectedChapterId]
               ) : (
-                <span className="text-ink-muted opacity-60">谈谈您的见解</span>
+                <span className="text-[#8C8471] opacity-60">谈谈您的见解</span>
               )}
             </div>
           )}
@@ -155,7 +155,7 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
           <button
             onClick={handleAskAI}
             title="问 AI"
-            className="mt-12 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border border-border-subtle text-ink-muted hover:border-brand hover:text-brand transition-colors font-sans"
+            className="mt-12 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border border-[#E2DED0] text-[#8C8471] hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors font-sans"
           >
             <Bot size={12} />
             问 AI

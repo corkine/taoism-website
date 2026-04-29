@@ -74,12 +74,12 @@ export const Header = React.memo(({
             <motion.h1
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-6xl font-bold text-ink-header"
+              className="text-6xl font-bold text-[#1A1A1A]"
             >
               {title}
             </motion.h1>
           </div>
-          <div className="h-1.5 w-32 bg-brand" />
+          <div className="h-1.5 w-32 bg-[#A63A2B]" />
         </div>
 
         <div className="w-full md:w-auto md:text-right mt-2 md:mt-0">
@@ -93,7 +93,7 @@ export const Header = React.memo(({
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.1 }}
                   title={syncState.status === 'syncing' ? '正在同步数据...' : '有本地未同步的变更，点击同步'}
-                  className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 bg-brand/10 text-brand rounded-full mr-2 transition-all ${syncState.status === 'syncing' ? 'opacity-70 cursor-wait' : 'hover:bg-brand/20'}`}
+                  className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 bg-[#A63A2B]/10 text-[#A63A2B] rounded-full mr-2 transition-all ${syncState.status === 'syncing' ? 'opacity-70 cursor-wait' : 'hover:bg-[#A63A2B]/20'}`}
                   onClick={syncState.status === 'syncing' ? undefined : handleDirtySync}
                 >
                   <CloudUpload size={12} className={syncState.status === 'syncing' ? 'animate-pulse' : ''} />
@@ -104,23 +104,23 @@ export const Header = React.memo(({
               )}
             </AnimatePresence>
 
-            <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-ink-muted hover:text-brand transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
+            <button onClick={() => setIsAboutOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
               关于
             </button>
-            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted font-sans">|</span>
-            <button onClick={handleGlobalExport} className="text-xs font-bold uppercase tracking-widest text-ink-muted hover:text-brand transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
+            <button onClick={handleGlobalExport} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm">
               导出
             </button>
-            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted font-sans">|</span>
-            <label className="text-xs font-bold uppercase tracking-widest text-ink-muted hover:text-brand transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
+            <label className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
               导入
               <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
             </label>
-            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted font-sans">|</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
             <button
               onClick={() => setIsWebDAVOpen(true)}
               title={syncState.message || '点击打开在线备份面板'}
-              className="text-xs font-bold uppercase tracking-widest text-ink-muted hover:text-brand transition-colors font-sans flex items-center gap-1.5 py-1 rounded-sm"
+              className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1.5 py-1 rounded-sm"
             >
               备份
             </button>
@@ -129,8 +129,8 @@ export const Header = React.memo(({
           <div className="flex gap-2 text-xl font-serif mt-3 md:mt-2 justify-start md:justify-end md:ml-4 flex-wrap">
             {BOOKS.map((book, index) => (
               <React.Fragment key={book.id}>
-                <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-brand font-bold" : "text-ink-muted hover:text-brand"}>{book.title}</NavLink>
-                {index < BOOKS.length - 1 && <span className="text-border-subtle">/</span>}
+                <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-[#A63A2B] font-bold" : "text-[#8C8471] hover:text-[#A63A2B]"}>{book.title}</NavLink>
+                {index < BOOKS.length - 1 && <span className="text-[#E2DED0]">/</span>}
               </React.Fragment>
             ))}
           </div>

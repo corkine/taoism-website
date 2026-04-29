@@ -249,7 +249,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto min-h-screen bg-paper text-ink font-serif selection:bg-brand/10 selection:text-brand">
+    <div className="max-w-7xl mx-auto min-h-screen bg-[#FDFBF7] text-[#2D2926] font-serif selection:bg-[#A63A2B]/10 selection:text-[#A63A2B]">
       {/* Header Area */}
       <Header
         title={bookConfig.title}
@@ -330,12 +330,10 @@ export default function BookPage({ bookId }: { bookId: string }) {
       />
 
       <style>{`
-        @import url('https://fonts.googleapis.cn/css2?family=Noto+Serif+SC:wght@300;600;900&family=Plus+Jakarta+Sans:wght@300;500;700&display=swap');
-        
         :root {
           --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
           --font-serif: 'Noto Serif SC', serif;
-          background-color: var(--color-paper);
+          background-color: #FDFBF7;
         }
 
         .font-serif {
