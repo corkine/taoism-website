@@ -12,10 +12,7 @@ interface SidebarProps {
   openEditSub: (parentId: string, subId?: string) => void;
   handleRemoveSubSection: (parentId: string, subId: string) => void;
   annotatedChapterIds: Set<number>;
-  chapters: Chapter[];
-  customInterpretations: Record<number, string>;
-  onAskAI?: (systemPrompt: string) => void;
-  bookTitle: string;
+  onAskAIForSection?: (title: string, start: number, end: number) => void;
 }
 
 const colors = [
@@ -45,42 +42,13 @@ export const Sidebar = React.memo(({
   handleRemoveSection,
   openEditSub,
   handleRemoveSubSection,
-  onAskAI,
-  chapters,
-  customInterpretations,
-  annotatedChapterIds,
-  bookTitle
+  onAskAIForSection,
+  annotatedChapterIds
 }: SidebarProps) => {
   const handleAskAI = (title: string, start: number, end: number) => {
-    if (!onAskAI) return;
-
-    const relevantChapters = chapters.filter(c => c.id >= start && c.id <= end);
-
-    // Global structure description
-    const structureText = mainSections.map((ms, i) => {
-      const subs = ms.subSections.map((ss, j) => `    - ${i + 1}.${j + 1} ${ss.title} (CH ${ss.startChapter}-${ss.endChapter})`).join('\n');
-      return `- ${i + 1}. ${ms.title} (CH ${ms.startChapter}-${ms.endChapter})${subs ? '\n' + subs : ''}`;
-    }).join('\n');
-
-    const prompt = `你是一位精通中国古典哲学的学者，尤其擅长道家经典。
-用户正在阅读《${bookTitle}》，当前关注的划分范围是：【${title}】（第 ${start} 至 ${end} 章）。
-
-为了提供准确的讨论，以下是本书当前的整体划分结构：
-${structureText}
-
-以下是当前关注范围（${title}）内的详细章节内容及用户的批注：
-
-${relevantChapters.map(c => {
-      const annotation = customInterpretations[c.id];
-      return `--- 第 ${c.id} 章：${c.title} ---
-【原文】
-${c.content}
-${annotation ? `【用户批注】\n${annotation}` : ''}`;
-    }).join('\n\n')}
-
-请根据以上整体结构和详细内容，为用户提供深度的讨论与见解。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。`;
-
-    onAskAI(prompt);
+    if (onAskAIForSection) {
+      onAskAIForSection(title, start, end);
+    }
   };
 
   return (
