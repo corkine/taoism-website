@@ -4,7 +4,7 @@ import {
   pushBackupToRemote,
 } from '../utils/webdav';
 import { formatTime } from '../utils/time';
-import { loadWebDAVConfig, restoreBackupData, clearDirty, touchLocalWriteTime } from '../utils/storage';
+import { loadWebDAVConfig, restoreBackupData, clearDirty, touchLocalWriteTime, buildBackupData, mergeBackupData, isDirty } from '../utils/storage';
 
 import { GlobalSyncStatus, SyncState, WebDAVConfig } from '../types';
 
@@ -13,6 +13,8 @@ export interface UseWebDAVSyncReturn {
   webdavConfig: WebDAVConfig | null;
   triggerUpload: () => Promise<void>;
   triggerDownload: () => Promise<{ needsReload: boolean }>;
+  triggerSync: () => Promise<{ needsConfirm: boolean; conflicts?: any[]; mergedData?: any; needsReload?: boolean }>;
+  finalizeSync: (mergedData: any) => Promise<void>;
 }
 
 export function useWebDAVSync(): UseWebDAVSyncReturn {
@@ -39,7 +41,6 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
       const syncedAt = await pushBackupToRemote(cfg);
       touchLocalWriteTime();
       clearDirty(); // Data is now safe on remote
-      console.log('syncedAt', syncedAt);
       setStatus('success', '上传成功', formatTime(syncedAt));
     } catch (e: any) {
       setStatus('error', e.message || '上传失败');
@@ -52,7 +53,7 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
     if (!cfg?.url) return { needsReload: false };
     setStatus('syncing', '正在下载数据…');
     try {
-      const data = await fetchRemoteData(cfg);
+      let data = await fetchRemoteData(cfg);
       if (!data) {
         setStatus('error', '远程尚无备份文件，请先上传');
         return { needsReload: false };
@@ -69,6 +70,67 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
     }
   }, [setStatus]);
 
+  // ── Public: sync ──────────────────────────────────────────────────────────
+  const triggerSync = useCallback(async (): Promise<{ needsConfirm: boolean; conflicts?: any[]; mergedData?: any; needsReload?: boolean }> => {
+    const cfg = loadWebDAVConfig();
+    if (!cfg?.url) return { needsConfirm: false };
+
+    if (!isDirty()) {
+      // If not dirty, someone may change in remote, just download and update
+      const res = await triggerDownload();
+      return { needsConfirm: false, needsReload: res.needsReload };
+    }
+
+    // If dirty, we need to merge local and remote
+    setStatus('syncing', '正在获取远程数据并准备合并…');
+    try {
+      const remoteData = await fetchRemoteData(cfg);
+      if (!remoteData) {
+        // No remote data, just upload local
+        await triggerUpload();
+        return { needsConfirm: false };
+      }
+
+      const localData = buildBackupData();
+      const { mergedData, conflicts } = mergeBackupData(localData, remoteData);
+
+      if (conflicts.length > 0) {
+        setStatus('idle', '发现合并冲突，请确认');
+        return { needsConfirm: true, conflicts, mergedData };
+      }
+
+      // No conflicts, proceed with sync
+      setStatus('syncing', '正在同步合并后的数据…');
+      await pushBackupToRemote(cfg, mergedData);
+      restoreBackupData(mergedData);
+      touchLocalWriteTime();
+      clearDirty();
+      setStatus('success', '同步成功', formatTime(mergedData.syncedAt));
+      return { needsConfirm: false, needsReload: true };
+    } catch (e: any) {
+      setStatus('error', e.message || '同步失败');
+      return { needsConfirm: false };
+    }
+  }, [setStatus, triggerDownload, triggerUpload]);
+
+  // ── Public: finalize ──────────────────────────────────────────────────────
+  const finalizeSync = useCallback(async (mergedData: any) => {
+    const cfg = loadWebDAVConfig();
+    if (!cfg?.url || !mergedData) return;
+
+    setStatus('syncing', '正在应用合并结果…');
+    try {
+      await pushBackupToRemote(cfg, mergedData);
+      restoreBackupData(mergedData);
+      touchLocalWriteTime();
+      clearDirty();
+      setStatus('success', '同步成功', formatTime(mergedData.syncedAt));
+    } catch (e: any) {
+      setStatus('error', e.message || '同步失败');
+      throw e;
+    }
+  }, [setStatus]);
+
   // Keep webdavConfig in sync when user saves new config in the modal
   useEffect(() => {
     const handler = () => setWebdavConfig(loadWebDAVConfig());
@@ -81,5 +143,7 @@ export function useWebDAVSync(): UseWebDAVSyncReturn {
     webdavConfig,
     triggerUpload,
     triggerDownload,
+    triggerSync,
+    finalizeSync,
   };
 }

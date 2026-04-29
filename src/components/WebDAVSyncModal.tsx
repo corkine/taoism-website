@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings } from 'lucide-react';
+import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings, WifiSync, ArrowUpDown } from 'lucide-react';
 import {
   WEBDAV_REMOTE_PATH,
   fetchRemoteData,
 } from '../utils/webdav';
 import { formatTime } from '../utils/time';
-import { WEBDAV_CONFIG_KEY, loadWebDAVConfig } from '../utils/storage';
+import { loadWebDAVConfig, saveWebDAVConfig } from '../utils/storage';
 import { WebDAVConfig, GlobalSyncStatus } from '../types';
 
 type ModalSyncStatus =
@@ -19,6 +19,8 @@ interface WebDAVSyncModalProps {
   onClose: () => void;
   onTriggerUpload?: () => Promise<void>;
   onTriggerDownload?: () => Promise<{ needsReload: boolean }>;
+  onTriggerSync?: () => Promise<{ needsConfirm: boolean; conflicts?: any[]; mergedData?: any; needsReload?: boolean }>;
+  onFinalizeSync?: (mergedData: any) => Promise<void>;
   globalSyncStatus?: GlobalSyncStatus;
   globalSyncMessage?: string;
   globalLastSyncTime?: string | null;
@@ -29,6 +31,8 @@ export function WebDAVSyncModal({
   onClose,
   onTriggerUpload,
   onTriggerDownload,
+  onTriggerSync,
+  onFinalizeSync,
   globalSyncStatus,
   globalSyncMessage,
   globalLastSyncTime,
@@ -37,6 +41,9 @@ export function WebDAVSyncModal({
   const [status, setStatus] = useState<ModalSyncStatus>({ type: 'idle' });
   const [remoteInfo, setRemoteInfo] = useState<{ syncedAt?: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  const [syncConflicts, setSyncConflicts] = useState<any[] | null>(null);
+  const [pendingMergedData, setPendingMergedData] = useState<any>(null);
 
   // Sync modal local status with global status if global is active
   useEffect(() => {
@@ -77,8 +84,8 @@ export function WebDAVSyncModal({
       username: draftServer.username.trim(),
       password: draftServer.password,
     };
+    saveWebDAVConfig(trimmed);
     setConfig(trimmed);
-    localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(trimmed));
     window.dispatchEvent(new Event('webdav-config-saved'));
     setShowSettings(false);
     setStatus({ type: 'idle' });
@@ -113,6 +120,32 @@ export function WebDAVSyncModal({
       if (needsReload) {
         setTimeout(() => window.location.reload(), 1500);
       }
+    }
+  };
+
+  const handleSync = async () => {
+    if (onTriggerSync) {
+      setSyncConflicts(null);
+      setPendingMergedData(null);
+      const res = await onTriggerSync();
+      if (res.needsConfirm) {
+        setSyncConflicts(res.conflicts || []);
+        setPendingMergedData(res.mergedData);
+      } else if (res.needsReload) {
+        setTimeout(() => window.location.reload(), 1500);
+      }
+    }
+  };
+
+  const finalizeSync = async () => {
+    if (!pendingMergedData || !onFinalizeSync) return;
+    try {
+      await onFinalizeSync(pendingMergedData);
+      setSyncConflicts(null);
+      setPendingMergedData(null);
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e: any) {
+      // Error is handled by the hook and set in status
     }
   };
 
@@ -262,35 +295,47 @@ export function WebDAVSyncModal({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={handleUpload}
+                  disabled={status.type === 'loading'}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1A1A1A] text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Upload size={13} />
+                  上传到云端
+                </button>
+                <button
+                  onClick={handleDownload}
+                  disabled={status.type === 'loading'}
+                  className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#1A1A1A] text-[#1A1A1A] text-[11px] uppercase tracking-widest font-bold font-sans hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Download size={13} />
+                  从云端下载
+                </button>
+              </div>
+
               <button
-                onClick={handleUpload}
+                onClick={handleSync}
                 disabled={status.type === 'loading'}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1A1A1A] text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#A63A2B] text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-[#1A1A1A] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Upload size={13} />
-                上传到云端
+                <ArrowUpDown size={13} />
+                双向同步
               </button>
-              <button
-                onClick={handleDownload}
-                disabled={status.type === 'loading'}
-                className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#1A1A1A] text-[#1A1A1A] text-[11px] uppercase tracking-widest font-bold font-sans hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Download size={13} />
-                从云端下载
-              </button>
+
+
             </div>
 
-            <button
-              onClick={() => checkRemote(config)}
-              disabled={status.type === 'loading'}
-              className="w-full text-center text-[10px] uppercase tracking-widest font-bold font-sans text-[#8C8471] hover:text-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              检查远程文件状态
-            </button>
-
             <p className="text-[10px] font-sans text-[#C8C4B7] leading-relaxed">
-              手动上传会覆盖云端数据；手动下载会覆盖本地数据并刷新页面。
+              上传/下载会直接覆盖；双向同步会合并本地未保存修改，冲突时需手动确认。
+              <button
+                onClick={() => checkRemote(config)}
+                disabled={status.type === 'loading'}
+                className="inline-block text-center text-[10px] uppercase tracking-widest font-sans text-[#8C8471] hover:text-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                检查远程文件状态
+              </button>
             </p>
           </div>
         )}
@@ -304,6 +349,62 @@ export function WebDAVSyncModal({
             >
               立即配置
             </button>
+          </div>
+        )}
+
+        {/* ── Conflict Confirmation Overlay ── */}
+        {syncConflicts && syncConflicts.length > 0 && (
+          <div className="absolute inset-0 bg-[#FDFBF7] z-[210] flex flex-col">
+            <div className="p-8 pb-4 border-b border-[#E2DED0]">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-[#A63A2B]" />
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A1A1A] font-sans">
+                  发现合并冲突 ({syncConflicts.length})
+                </h4>
+              </div>
+              <p className="text-xs text-[#8C8471] font-sans">
+                以下内容在本地和远端均有修改，程序已尝试自动合并，请确认是否继续。
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8 space-y-4">
+              {syncConflicts.map((c, i) => (
+                <div key={i} className="p-3 bg-[#F5F2EB] border border-[#E2DED0] space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-[#A63A2B] font-sans">
+                    {c.type === 'partition' ? '分卷冲突' : '备注冲突'} - {c.bookId} / {c.key}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-tighter text-[#8C8471] font-bold">本地</p>
+                      <p className="text-[11px] text-[#1A1A1A] line-clamp-3">{c.local}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-tighter text-[#8C8471] font-bold">远端</p>
+                      <p className="text-[11px] text-[#1A1A1A] line-clamp-3">{c.remote}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-8 pt-4 border-t border-[#E2DED0] grid grid-cols-2 gap-4">
+              <button
+                onClick={() => {
+                  setSyncConflicts(null);
+                  setPendingMergedData(null);
+                  setStatus({ type: 'idle' });
+                }}
+                className="py-3 border-2 border-[#1A1A1A] text-[#1A1A1A] text-[11px] uppercase tracking-widest font-bold font-sans hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors"
+              >
+                取消同步
+              </button>
+              <button
+                onClick={finalizeSync}
+                className="py-3 bg-[#1A1A1A] text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-[#A63A2B] transition-colors"
+              >
+                确认并同步
+              </button>
+            </div>
           </div>
         )}
       </div>

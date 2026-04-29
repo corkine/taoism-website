@@ -128,6 +128,13 @@ export function loadWebDAVConfig(): WebDAVConfig | null {
     }
 }
 
+/**
+ * Save WebDAV configuration to localStorage.
+ */
+export function saveWebDAVConfig(config: WebDAVConfig) {
+    localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(config));
+}
+
 /** Returns true if there are unsaved local changes. */
 export function isDirty(): boolean {
     return localStorage.getItem(DIRTY_FLAG_KEY) !== null;
@@ -191,6 +198,97 @@ export function restoreBackupData(data: any) {
     if (data.aiSettings) {
         localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(data.aiSettings));
     }
+}
+
+export interface Conflict {
+    type: 'partition' | 'interpretation';
+    bookId: string;
+    key: string | number;
+    local: string;
+    remote: string;
+}
+
+/**
+ * Merge two backup data objects and return conflicts.
+ */
+export function mergeBackupData(local: any, remote: any): { mergedData: any, conflicts: Conflict[] } {
+    const conflicts: Conflict[] = [];
+    const merged: any = {
+        ...local,
+        syncedAt: new Date().toISOString(),
+        books: { ...local.books }
+    };
+
+    const remoteBooks = remote.books || {};
+    const localBooks = local.books || {};
+
+    const allBookIds = new Set([...Object.keys(localBooks), ...Object.keys(remoteBooks)]);
+
+    for (const bookId of allBookIds) {
+        const localBook = localBooks[bookId] || { partitions: [], interpretations: {} };
+        const remoteBook = remoteBooks[bookId] || { partitions: [], interpretations: {} };
+
+        // Merge partitions
+        const mergedPartitions = [...(localBook.partitions || [])];
+        for (const r of (remoteBook.partitions || [])) {
+            const exists = mergedPartitions.find((l: any) => l.id === r.id);
+            if (!exists) {
+                mergedPartitions.push(r);
+            } else if (JSON.stringify(exists) !== JSON.stringify(r)) {
+                conflicts.push({
+                    type: 'partition',
+                    bookId,
+                    key: r.id,
+                    local: '本地分卷配置',
+                    remote: '远端分卷配置'
+                });
+                // Still merge by giving remote one a unique ID for the preview or if user accepts
+                mergedPartitions.push({
+                    ...r,
+                    id: `${r.id}_remote_${Math.floor(Math.random() * 1000)}`
+                });
+            }
+        }
+
+        // Merge interpretations
+        const mergedInterpretations = { ...(localBook.interpretations || {}) };
+        const remoteInterp = remoteBook.interpretations || {};
+
+        const remoteTime = remote.syncedAt || '未知时间';
+        const localTime = local.syncedAt || new Date().toISOString();
+
+        for (const [key, rVal] of Object.entries(remoteInterp)) {
+            const lVal = mergedInterpretations[key];
+            if (lVal === undefined) {
+                mergedInterpretations[key] = rVal;
+            } else if (lVal !== rVal) {
+                // Check if it's already a merged string to avoid duplicate markers
+                if (!String(lVal).includes(String(rVal)) && !String(rVal).includes(String(lVal))) {
+                    conflicts.push({
+                        type: 'interpretation',
+                        bookId,
+                        key: key,
+                        local: String(lVal),
+                        remote: String(rVal)
+                    });
+                    const rTimeStr = new Date(remoteTime).toLocaleString('zh-CN');
+                    const lTimeStr = new Date(localTime).toLocaleString('zh-CN');
+                    mergedInterpretations[key] = `[远端 ${rTimeStr}]:\n${rVal}\n\n[本地 ${lTimeStr}]:\n${lVal}`;
+                }
+            }
+        }
+
+        merged.books[bookId] = {
+            partitions: mergedPartitions,
+            interpretations: mergedInterpretations
+        };
+    }
+
+    if (remote.aiSettings && !local.aiSettings) {
+        merged.aiSettings = remote.aiSettings;
+    }
+
+    return { mergedData: merged, conflicts };
 }
 
 /** Load AI assistant settings from localStorage. */

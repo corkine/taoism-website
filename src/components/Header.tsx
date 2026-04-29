@@ -18,7 +18,7 @@ export function Header({
 }: HeaderProps) {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(checkDirty());
-  const { syncState, triggerUpload, triggerDownload } = useWebDAVSync();
+  const { syncState, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
 
   useEffect(() => {
     const handler = () => setIsDirty(checkDirty());
@@ -124,6 +124,8 @@ export function Header({
         globalLastSyncTime={syncState.lastSyncTime}
         onTriggerUpload={triggerUpload}
         onTriggerDownload={triggerDownload}
+        onTriggerSync={triggerSync}
+        onFinalizeSync={finalizeSync}
       />
     </>
   );
