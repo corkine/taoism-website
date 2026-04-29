@@ -7,24 +7,16 @@
 import { WebDAVConfig, MainSection } from "../types";
 import { BOOKS } from "../data/book";
 
-// ─── Storage key constants ────────────────────────────────────────────────────
-
-/** Per-book partition layout stored by the user. */
-export const PARTITIONS_KEY = 'partitions';
-
-/** Per-book custom interpretations (notes) written by the user. */
-export const INTERPRETATION_KEY = 'interpretation';
-
-// ─── Per-Book Data Helpers ──────────────────────────────────────────────────
+// ─── Per book data ──────────────────────────────────────────────────────────
 
 /** Get the storage key for a book's partitions. */
 export function getPartitionsKey(bookId: string): string {
-    return `${bookId}_${PARTITIONS_KEY}`;
+    return `taoism_partitions_${bookId}`;
 }
 
 /** Get the storage key for a book's interpretations. */
 export function getInterpretationsKey(bookId: string): string {
-    return `${bookId}_${INTERPRETATION_KEY}`;
+    return `taoism_interpretations_${bookId}`;
 }
 
 /** Load partitions for a specific book. */
@@ -63,18 +55,31 @@ export function saveInterpretations(bookId: string, interpretations: Record<numb
     localStorage.setItem(getInterpretationsKey(bookId), JSON.stringify(interpretations));
 }
 
-/** WebDAV connection settings. */
-export const WEBDAV_CONFIG_KEY = 'webdav_config';
-
-/** Tracks the last time local data was written, for conflict detection. */
-export const LOCAL_LAST_WRITE_KEY = 'daoism_local_last_write';
+// ─── AI assistant configuration ───────────────────────────────────────────────
 
 /** AI assistant configuration. */
-export const AI_SETTINGS_KEY = 'daoism_ai_settings';
+const AI_SETTINGS_KEY = 'taoism_ai_settings';
 
-/** The syncedAt timestamp of the remote file when we last successfully synced. */
-export const REMOTE_LAST_SYNC_KEY = 'daoism_remote_last_sync';
+/** Load AI assistant settings from localStorage. */
+export function loadAISettings(defaultSettings: any): any {
+    try {
+        const saved = localStorage.getItem(AI_SETTINGS_KEY);
+        if (saved) return { ...defaultSettings, ...JSON.parse(saved) };
+    } catch { }
+    return defaultSettings;
+}
 
+/** Save AI assistant settings to localStorage and mark as dirty. */
+export function saveAISettings(settings: any, markDirtyFlag: boolean = true): void {
+    try {
+        localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
+        if (markDirtyFlag) {
+            markDirty();
+        }
+    } catch { }
+}
+
+// ─── Dirty-flag ───────────────────────────────────────────────────────
 /**
  * "Dirty flag" key.
  *
@@ -82,9 +87,7 @@ export const REMOTE_LAST_SYNC_KEY = 'daoism_remote_last_sync';
  * everything is in sync.  We store a timestamp (not just "true") so the UI
  * can optionally surface how long ago the last change happened.
  */
-export const DIRTY_FLAG_KEY = 'daoism_dirty_since';
-
-// ─── Dirty-flag helpers ───────────────────────────────────────────────────────
+const DIRTY_FLAG_KEY = 'taoism_dirty_since';
 
 /**
  * Mark local data as dirty (unsaved).
@@ -119,6 +122,22 @@ export function getDirtySince(): string | null {
     return localStorage.getItem(DIRTY_FLAG_KEY);
 }
 
+/** Returns true if there are unsaved local changes. */
+export function isDirty(): boolean {
+    return localStorage.getItem(DIRTY_FLAG_KEY) !== null;
+}
+
+// ─── WebDAV sync ─────────────────────────────────────────────────────────
+
+/** WebDAV connection settings. */
+const WEBDAV_CONFIG_KEY = 'taoism_webdav_config';
+
+/** Tracks the last time local data was written, for conflict detection. */
+const LOCAL_LAST_WRITE_KEY = 'taoism_local_last_write';
+
+/** The syncedAt timestamp of the remote file when we last successfully synced. */
+const REMOTE_LAST_SYNC_KEY = 'taoism_remote_last_sync';
+
 /**
  * Load WebDAV configuration from localStorage.
  * @returns The WebDAVConfig object or null if not found or invalid.
@@ -138,13 +157,6 @@ export function saveWebDAVConfig(config: WebDAVConfig) {
     localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(config));
 }
 
-/** Returns true if there are unsaved local changes. */
-export function isDirty(): boolean {
-    return localStorage.getItem(DIRTY_FLAG_KEY) !== null;
-}
-
-// ─── Local write-time (conflict detection) ────────────────────────────────────
-
 /** Record that local data was written right now (used by WebDAV sync). */
 export function touchLocalWriteTime(): void {
     localStorage.setItem(LOCAL_LAST_WRITE_KEY, new Date().toISOString());
@@ -154,8 +166,6 @@ export function touchLocalWriteTime(): void {
 export function getLocalWriteTime(): string | null {
     return localStorage.getItem(LOCAL_LAST_WRITE_KEY);
 }
-
-// ─── Remote sync-time (conflict detection) ────────────────────────────────────
 
 /** Save the syncedAt timestamp of the remote data we just pulled or pushed. */
 export function saveRemoteSyncTime(time: string | null): void {
@@ -181,8 +191,8 @@ export function buildBackupData(includeAI: boolean = true) {
     const booksData: Record<string, any> = {};
     for (const book of BOOKS) {
         booksData[book.id] = {
-            partitions: JSON.parse(localStorage.getItem(`${book.id}_${PARTITIONS_KEY}`) || 'null'),
-            interpretations: JSON.parse(localStorage.getItem(`${book.id}_${INTERPRETATION_KEY}`) || 'null'),
+            partitions: loadPartitions(book.id, book.defaultPartitions),
+            interpretations: loadInterpretations(book.id),
         };
     }
     const data: any = {
@@ -192,7 +202,7 @@ export function buildBackupData(includeAI: boolean = true) {
         books: booksData,
     };
     if (includeAI) {
-        data.aiSettings = JSON.parse(localStorage.getItem(AI_SETTINGS_KEY) || 'null');
+        data.aiSettings = loadAISettings(null);
     }
     return data;
 }
@@ -208,14 +218,14 @@ export function restoreBackupData(data: any) {
     }
     for (const bookId of Object.keys(data.books)) {
         if (data.books[bookId].partitions) {
-            localStorage.setItem(`${bookId}_${PARTITIONS_KEY}`, JSON.stringify(data.books[bookId].partitions));
+            savePartitions(bookId, data.books[bookId].partitions);
         }
         if (data.books[bookId].interpretations) {
-            localStorage.setItem(`${bookId}_${INTERPRETATION_KEY}`, JSON.stringify(data.books[bookId].interpretations));
+            saveInterpretations(bookId, data.books[bookId].interpretations);
         }
     }
     if (data.aiSettings) {
-        localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(data.aiSettings));
+        saveAISettings(data.aiSettings, false);
     }
 }
 
@@ -310,25 +320,6 @@ export function mergeBackupData(local: any, remote: any): { mergedData: any, con
     return { mergedData: merged, conflicts };
 }
 
-/** Load AI assistant settings from localStorage. */
-export function loadAISettings(defaultSettings: any): any {
-    try {
-        const saved = localStorage.getItem(AI_SETTINGS_KEY);
-        if (saved) return { ...defaultSettings, ...JSON.parse(saved) };
-    } catch { }
-    return defaultSettings;
-}
-
-/** Save AI assistant settings to localStorage and mark as dirty. */
-export function saveAISettings(settings: any): void {
-    try {
-        localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
-        markDirty();
-    } catch { }
-}
-
-// ─── Export helper ────────────────────────────────────────────────────────────
-
 /**
  * Trigger a browser file download of the full user data backup.
  * Clears the dirty flag on success.
@@ -339,7 +330,7 @@ export function exportDataToFile(includeAI: boolean = false): void {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'daoism_all_data.json';
+    a.download = 'daoism_data.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
