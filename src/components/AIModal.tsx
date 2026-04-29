@@ -185,8 +185,8 @@ export function AIModal({
           flexDirection: 'column',
           maxHeight: '75vh',
           boxShadow: '0 24px 64px rgba(26,26,26,0.22), 0 4px 16px rgba(26,26,26,0.12)',
-          background: '#FDFBF7',
-          borderTop: '3px solid #A63A2B',
+          background: 'var(--color-paper)',
+          borderTop: '3px solid var(--color-brand)',
           overflow: 'hidden',
           userSelect: dragState.current.dragging ? 'none' : 'auto',
         }}
@@ -196,14 +196,14 @@ export function AIModal({
           onMouseDown={onMouseDown}
           className="flex items-center justify-between px-4 py-3 cursor-grab active:cursor-grabbing select-none"
           style={{
-            borderBottom: '1px solid #E2DED0',
-            background: '#F5F1EA',
+            borderBottom: '1px solid var(--color-border-subtle)',
+            background: 'var(--color-brand-light, #F5F1EA)',
             flexShrink: 0,
           }}
         >
           <div className="flex items-center gap-2">
-            <Bot size={14} className="text-[#A63A2B]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1A1A1A] font-sans">
+            <Bot size={14} className="text-brand" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-header font-sans">
               问 AI
             </span>
             {isStreaming && (
@@ -215,7 +215,7 @@ export function AIModal({
                       width: 4,
                       height: 4,
                       borderRadius: '50%',
-                      background: '#A63A2B',
+                      background: 'var(--color-brand)',
                       animation: `ai-dot-bounce 1.2s ${i * 0.2}s infinite ease-in-out`,
                       display: 'inline-block',
                     }}
@@ -228,7 +228,7 @@ export function AIModal({
             <button
               onClick={() => setIsSettingsOpen(true)}
               title="设置"
-              className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#A63A2B] transition-colors rounded"
+              className="w-7 h-7 flex items-center justify-center text-ink-muted hover:text-brand transition-colors rounded"
             >
               <Settings size={13} />
             </button>
@@ -236,7 +236,7 @@ export function AIModal({
             <button
               onClick={onHide}
               title="隐藏"
-              className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#1A1A1A] transition-colors rounded"
+              className="w-7 h-7 flex items-center justify-center text-ink-muted hover:text-ink-header transition-colors rounded"
             >
               {/* Chevron-down as "hide" affordance */}
               <Minus size={14} />
@@ -245,7 +245,7 @@ export function AIModal({
             <button
               onClick={handleClose}
               title="关闭并清空"
-              className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#A63A2B] transition-colors rounded"
+              className="w-7 h-7 flex items-center justify-center text-ink-muted hover:text-brand transition-colors rounded"
             >
               <X size={14} />
             </button>
@@ -259,8 +259,8 @@ export function AIModal({
         >
           {messages.length === 0 && !error && (
             <div className="h-full flex flex-col items-center justify-center text-center py-8 gap-3">
-              <Bot size={32} className="text-[#E2DED0]" />
-              <p className="text-[12px] text-[#8C8471] font-sans leading-relaxed">
+              <Bot size={32} className="text-border-subtle" />
+              <p className="text-[12px] text-ink-muted font-sans leading-relaxed">
                 将当前章节作为上下文<br />向 AI 提问任何问题
               </p>
             </div>
@@ -275,7 +275,7 @@ export function AIModal({
               <div
                 className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5"
                 style={{
-                  background: msg.role === 'user' ? '#1A1A1A' : '#A63A2B',
+                  background: msg.role === 'user' ? 'var(--color-ink-header)' : 'var(--color-brand)',
                 }}
               >
                 {msg.role === 'user' ? (
@@ -289,8 +289,8 @@ export function AIModal({
               <div
                 className="max-w-[82%] text-[13px] leading-relaxed font-serif"
                 style={{
-                  background: msg.role === 'user' ? '#1A1A1A' : '#F0EDE6',
-                  color: msg.role === 'user' ? '#FDFBF7' : '#2D2926',
+                  background: msg.role === 'user' ? 'var(--color-ink-header)' : 'var(--color-brand-light, #F0EDE6)',
+                  color: msg.role === 'user' ? 'var(--color-paper)' : 'var(--color-ink)',
                   padding: '8px 12px',
                   borderRadius:
                     msg.role === 'user'
@@ -318,8 +318,8 @@ export function AIModal({
         {/* ── Input Area ── */}
         <div
           style={{
-            borderTop: '1px solid #E2DED0',
-            background: '#FDFBF7',
+            borderTop: '1px solid var(--color-border-subtle)',
+            background: 'var(--color-paper)',
             flexShrink: 0,
             padding: '10px 12px',
             display: 'flex',
@@ -338,20 +338,20 @@ export function AIModal({
               flex: 1,
               resize: 'none',
               background: 'transparent',
-              border: '1px solid #E2DED0',
+              border: '1px solid var(--color-border-subtle)',
               outline: 'none',
               fontSize: 13,
               fontFamily: 'var(--font-sans, sans-serif)',
-              color: '#1A1A1A',
+              color: 'var(--color-ink-header)',
               padding: '8px 10px',
               lineHeight: 1.5,
               borderRadius: 4,
             }}
             onFocus={e => {
-              e.currentTarget.style.borderColor = '#A63A2B';
+              e.currentTarget.style.borderColor = 'var(--color-brand)';
             }}
             onBlur={e => {
-              e.currentTarget.style.borderColor = '#E2DED0';
+              e.currentTarget.style.borderColor = 'var(--color-border-subtle)';
             }}
           />
           {isStreaming ? (
@@ -359,7 +359,7 @@ export function AIModal({
               onClick={stopStreaming}
               title="停止"
               style={{ alignSelf: 'stretch', width: 36 }}
-              className="flex-shrink-0 flex items-center justify-center bg-[#A63A2B] text-white hover:bg-[#8a3024] transition-colors rounded"
+              className="flex-shrink-0 flex items-center justify-center bg-brand text-white hover:bg-brand/80 transition-colors rounded"
             >
               <Square size={14} />
             </button>
@@ -369,7 +369,7 @@ export function AIModal({
               disabled={!input.trim()}
               title="发送"
               style={{ alignSelf: 'stretch', width: 36 }}
-              className="flex-shrink-0 flex items-center justify-center bg-[#1A1A1A] text-white hover:bg-[#A63A2B] transition-colors rounded disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex-shrink-0 flex items-center justify-center bg-ink-header text-white hover:bg-brand transition-colors rounded disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Send size={14} />
             </button>

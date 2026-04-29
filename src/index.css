@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@theme {
+  --color-brand: #A63A2B;
+  --color-paper: #FDFBF7;
+  --color-ink: #2D2926;
+  --color-ink-header: #1A1A1A;
+  --color-ink-muted: #8C8471;
+  --color-ink-sub: #3D3D3D;
+  --color-border-subtle: #E2DED0;
+  --color-divider: #E2DED0;
+  
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", serif;
+}
+

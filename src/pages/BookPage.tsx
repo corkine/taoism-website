@@ -249,7 +249,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto min-h-screen bg-[#FDFBF7] text-[#2D2926] font-serif selection:bg-[#A63A2B]/10 selection:text-[#A63A2B]">
+    <div className="max-w-7xl mx-auto min-h-screen bg-paper text-ink font-serif selection:bg-brand/10 selection:text-brand">
       {/* Header Area */}
       <Header
         title={bookConfig.title}
@@ -337,7 +337,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
         :root {
           --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
           --font-serif: 'Noto Serif SC', serif;
-          background-color: #FDFBF7;
+          background-color: var(--color-paper);
         }
 
         .font-serif {
