@@ -34,10 +34,18 @@ export function Header({
 
   const handleDirtySync = async () => {
     if (!webdavConfig) {
-      alert('请先配置 WebDAV 以触发同步或者导出备份数据以清空此标记。');
+      setIsWebDAVOpen(true);
       return;
     }
-    await triggerSync();
+    const res = await triggerSync();
+    if (res.needsConfirm) {
+      if (confirm('当前存在未同步的变更, 是否自动合并后进行同步？')) {
+        await finalizeSync(res.mergedData)
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    } else if (res.needsReload) {
+      setTimeout(() => window.location.reload(), 1000);
+    }
   };
 
   const handleGlobalImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,15 +87,19 @@ export function Header({
             <AnimatePresence>
               {isDirty && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.5 }}
+                  key="dirty-pill"
+                  initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                  title="有本地未同步的变更，点击同步"
-                  className="cursor-pointer flex items-center gap-1.5 px-2 py-1 bg-brand/10 text-brand rounded-full mr-2 cursor-pointer"
-                  onClick={handleDirtySync}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.1 }}
+                  title={syncState.status === 'syncing' ? '正在同步数据...' : '有本地未同步的变更，点击同步'}
+                  className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 bg-brand/10 text-brand rounded-full mr-2 transition-all ${syncState.status === 'syncing' ? 'opacity-70 cursor-wait' : 'hover:bg-brand/20'}`}
+                  onClick={syncState.status === 'syncing' ? undefined : handleDirtySync}
                 >
-                  <CloudUpload size={12} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest font-sans">本地变更</span>
+                  <CloudUpload size={12} className={syncState.status === 'syncing' ? 'animate-pulse' : ''} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest font-sans">
+                    {syncState.status === 'syncing' ? '正在同步' : '本地变更'}
+                  </span>
                 </motion.div>
               )}
             </AnimatePresence>
