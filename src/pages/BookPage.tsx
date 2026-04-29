@@ -8,6 +8,7 @@ import { AIModal } from '../components/AIModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { loadPartitions, savePartitions, loadInterpretations, saveInterpretations, markDirty } from '../utils/storage';
+import { useMemo } from 'react';
 
 export default function BookPage({ bookId }: { bookId: string }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
@@ -44,7 +45,6 @@ export default function BookPage({ bookId }: { bookId: string }) {
     loadInterpretations(bookId)
   );
   const [editingLocId, setEditingLocId] = useState<number | null>(null);
-  const [tempInterpretation, setTempInterpretation] = useState('');
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   // AI Modal state
@@ -267,11 +267,11 @@ export default function BookPage({ bookId }: { bookId: string }) {
           handleRemoveSection={handleRemoveSection}
           openEditSub={openEditSub}
           handleRemoveSubSection={handleRemoveSubSection}
-          annotatedChapterIds={new Set(
+          annotatedChapterIds={useMemo(() => new Set(
             Object.entries(customInterpretations)
               .filter(([, v]) => !!(v as string)?.trim())
               .map(([k]) => Number(k))
-          )}
+          ), [customInterpretations])}
           chapters={bookConfig.content}
           customInterpretations={customInterpretations}
           onAskAI={(prompt) => {
@@ -296,8 +296,6 @@ export default function BookPage({ bookId }: { bookId: string }) {
             }}
             editingLocId={editingLocId}
             setEditingLocId={setEditingLocId}
-            tempInterpretation={tempInterpretation}
-            setTempInterpretation={setTempInterpretation}
             onAskAI={(prompt) => {
               setAISystemPrompt(prompt);
               setIsAIOpen(true);

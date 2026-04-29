@@ -12,10 +12,10 @@ interface HeaderProps {
   setIsAboutOpen: (isOpen: boolean) => void;
 }
 
-export function Header({
+export const Header = React.memo(({
   title,
   setIsAboutOpen,
-}: HeaderProps) {
+}: HeaderProps) => {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(checkDirty());
   const { syncState, webdavConfig, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
@@ -150,4 +150,4 @@ export function Header({
       />
     </>
   );
-}
+});

@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useEffect } from 'react';
+import React, { useRef, useLayoutEffect, useState } from 'react';
 import { ChevronRight, Edit2, Bot } from 'lucide-react';
 import { Chapter } from '../types';
 
@@ -10,8 +10,6 @@ interface ChapterContentProps {
   setCustomInterpretations: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   editingLocId: number | null;
   setEditingLocId: (id: number | null) => void;
-  tempInterpretation: string;
-  setTempInterpretation: (val: string) => void;
   /** Called when user clicks "问 AI" — passes the system prompt for the current chapter */
   onAskAI?: (systemPrompt: string) => void;
 }
@@ -24,11 +22,10 @@ export function ChapterContent({
   setCustomInterpretations,
   editingLocId,
   setEditingLocId,
-  tempInterpretation,
-  setTempInterpretation,
   onAskAI,
 }: ChapterContentProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [tempInterpretation, setTempInterpretation] = useState('');
 
   const adjustHeight = () => {
     const textarea = textareaRef.current;

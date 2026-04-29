@@ -1,3 +1,4 @@
+import React from 'react';
 import { Plus, Trash2, Edit2, AtSign } from 'lucide-react';
 import { MainSection, Chapter } from '../types';
 
@@ -35,7 +36,7 @@ const ringColors = [
   'ring-1 ring-inset ring-[#A62B6E]/40',
 ];
 
-export function Sidebar({
+export const Sidebar = React.memo(({
   chaptersCount,
   selectedChapterId,
   setSelectedChapterId,
@@ -49,7 +50,7 @@ export function Sidebar({
   customInterpretations,
   annotatedChapterIds,
   bookTitle
-}: SidebarProps) {
+}: SidebarProps) => {
   const handleAskAI = (title: string, start: number, end: number) => {
     if (!onAskAI) return;
 
@@ -255,4 +256,4 @@ ${annotation ? `【用户批注】\n${annotation}` : ''}`;
       </div>
     </aside>
   );
-}
+});
