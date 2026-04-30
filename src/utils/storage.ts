@@ -50,9 +50,12 @@ export function loadInterpretations(bookId: string): Record<number, string> {
     return {};
 }
 
-/** Save interpretations for a specific book. */
-export function saveInterpretations(bookId: string, interpretations: Record<number, string>): void {
+/** Save interpretations for a specific book and mark as dirty. */
+export function saveInterpretations(bookId: string, interpretations: Record<number, string>, markDirtyFlag: boolean = true): void {
     localStorage.setItem(getInterpretationsKey(bookId), JSON.stringify(interpretations));
+    if (markDirtyFlag) {
+        markDirty();
+    }
 }
 
 // ─── AI assistant configuration ───────────────────────────────────────────────

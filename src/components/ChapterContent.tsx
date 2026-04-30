@@ -1,31 +1,37 @@
-import React, { useRef, useLayoutEffect, useState } from 'react';
+import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { ChevronRight, Edit2, Bot } from 'lucide-react';
 import { Chapter } from '../types';
+import { loadInterpretations, saveInterpretations, markDirty } from '../utils/storage';
 
 interface ChapterContentProps {
+  bookId: string;
   chapters: Chapter[];
   selectedChapterId: number;
   setSelectedChapterId: (id: number | ((prev: number) => number)) => void;
-  customInterpretations: Record<number, string>;
-  setCustomInterpretations: React.Dispatch<React.SetStateAction<Record<number, string>>>;
-  editingLocId: number | null;
-  setEditingLocId: (id: number | null) => void;
   /** Called when user clicks "问 AI" — passes the system prompt for the current chapter */
   onAskAI?: (systemPrompt: string) => void;
 }
 
 export function ChapterContent({
+  bookId,
   chapters,
   selectedChapterId,
   setSelectedChapterId,
-  customInterpretations,
-  setCustomInterpretations,
-  editingLocId,
-  setEditingLocId,
   onAskAI,
 }: ChapterContentProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Local state for interpretations
+  const [customInterpretations, setCustomInterpretations] = useState<Record<number, string>>(() =>
+    loadInterpretations(bookId)
+  );
+  const [editingLocId, setEditingLocId] = useState<number | null>(null);
   const [tempInterpretation, setTempInterpretation] = useState('');
+
+  // Sync state when bookId changes
+  useEffect(() => {
+    setCustomInterpretations(loadInterpretations(bookId));
+  }, [bookId]);
 
   const adjustHeight = () => {
     const textarea = textareaRef.current;
@@ -35,13 +41,12 @@ export function ChapterContent({
     }
   };
 
-  // Use useLayoutEffect to ensure height is adjusted BEFORE the browser paints,
-  // preventing any visible "jump" or lag during typing.
   useLayoutEffect(() => {
     if (editingLocId === selectedChapterId) {
       adjustHeight();
     }
   }, [tempInterpretation, editingLocId, selectedChapterId]);
+
   const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
   const handleAskAI = () => {
@@ -60,7 +65,7 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
 
   return (
     <section className="flex-1">
-      <article className="relative bg-white border border-[#E2DED0] p-6 md:p-12 shadow-sm min-h-[500px]">
+      <article className="relative bg-white border border-[#E2DED0] p-6 md:p-12 shadow-sm">
         <div className="hidden md:flex absolute -left-4 top-12 flex-col items-center gap-2">
           <div className="text-[10px] text-[#A63A2B] font-bold font-sans rotate-180 writing-vertical-rl tracking-widest uppercase">Chapter</div>
           <div className="bg-[#1A1A1A] text-white w-8 h-8 flex items-center justify-center text-xs font-sans font-bold">
@@ -100,7 +105,7 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
         <div className="mt-10 md:mt-16 pt-6 md:pt-8 border-t border-[#E2DED0]">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8C8471] font-sans flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-[#A63A2B]" rounded-full />
+              <div className="w-1.5 h-1.5 bg-[#A63A2B] rounded-full" />
               释义
             </h3>
             {editingLocId !== selectedChapterId ? (
@@ -120,7 +125,9 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
                 </button>
                 <button
                   onClick={() => {
-                    setCustomInterpretations(prev => ({ ...prev, [selectedChapterId]: tempInterpretation }));
+                    const next = { ...customInterpretations, [selectedChapterId]: tempInterpretation };
+                    saveInterpretations(bookId, next, true);
+                    setCustomInterpretations(next);
                     setEditingLocId(null);
                   }}
                   className="text-[10px] uppercase tracking-widest font-bold text-white bg-[#1A1A1A] hover:bg-[#A63A2B] transition-colors px-3 py-1.5 font-sans"
@@ -140,7 +147,7 @@ ${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterp
               placeholder="谈谈您的见解..."
             />
           ) : (
-            <div className="text-[13px] text-[#3D3D3D] leading-loose whitespace-pre-wrap px-4 border-l-2 border-[#E2DED0] italic">
+            <div className="text-[13px] text-[#3D3D3D] leading-loose whitespace-pre-wrap px-4 border-l-2 border-[#E2DED0]">
               {customInterpretations[selectedChapterId] ? (
                 customInterpretations[selectedChapterId]
               ) : (

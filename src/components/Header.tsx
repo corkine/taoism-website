@@ -6,19 +6,19 @@ import { WebDAVSyncModal } from './WebDAVSyncModal';
 import { useWebDAVSync } from '../hooks/useWebDAVSync';
 import { CloudUpload } from 'lucide-react';
 import { isDirty as checkDirty, restoreBackupData, exportDataToFile } from '../utils/storage';
+import { AboutModals } from './Modals';
 
 interface HeaderProps {
   title: string;
-  setIsAboutOpen: (isOpen: boolean) => void;
 }
 
 export const Header = React.memo(({
   title,
-  setIsAboutOpen,
 }: HeaderProps) => {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(checkDirty());
   const { syncState, webdavConfig, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setIsDirty(checkDirty());
@@ -148,6 +148,9 @@ export const Header = React.memo(({
         onTriggerSync={triggerSync}
         onFinalizeSync={finalizeSync}
       />
+
+      {/* About Modals */}
+      <AboutModals isAboutOpen={isAboutOpen} setIsAboutOpen={setIsAboutOpen} />
     </>
   );
 });
