@@ -101,6 +101,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
             selectedChapterId={selectedChapterId}
             setSelectedChapterId={setSelectedChapterId}
             onAskAI={handleOpenAI}
+            onUpdatePrompt={setAISystemPrompt}
           />
         </div>
       </main>

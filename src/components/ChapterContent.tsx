@@ -10,6 +10,8 @@ interface ChapterContentProps {
   setSelectedChapterId: (id: number | ((prev: number) => number)) => void;
   /** Called when user clicks "问 AI" — passes the system prompt for the current chapter */
   onAskAI?: (systemPrompt: string) => void;
+  /** Called whenever the content changes to keep the prompt in sync */
+  onUpdatePrompt?: (systemPrompt: string) => void;
 }
 
 export function ChapterContent({
@@ -18,6 +20,7 @@ export function ChapterContent({
   selectedChapterId,
   setSelectedChapterId,
   onAskAI,
+  onUpdatePrompt,
 }: ChapterContentProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -49,9 +52,9 @@ export function ChapterContent({
 
   const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
-  const handleAskAI = () => {
-    if (!onAskAI) return;
-    const prompt = `你是一位精通中国古典哲学的学者，尤其擅长道家经典。以下是用户正在阅读的章节内容，请根据此内容回答用户的问题，可以结合原文分析其哲学思想、历史背景及现代意义。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。
+  const generatePrompt = () => {
+    const savedInterpretation = customInterpretations[selectedChapterId] || '';
+    return `你是一位精通中国古典哲学的学者，尤其擅长道家经典。以下是用户正在阅读的章节内容，请根据此内容回答用户的问题，可以结合原文分析其哲学思想、历史背景及现代意义。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。
 
 【当前章节】
 ${selectedChapter.title}
@@ -59,8 +62,18 @@ ${selectedChapter.title}
 【原文】
 ${selectedChapter.content}
 
-${customInterpretations[selectedChapterId] ? `【用户注记】\n${customInterpretations[selectedChapterId]}` : ''}`;
-    onAskAI(prompt);
+${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
+  };
+
+  useEffect(() => {
+    if (onUpdatePrompt) {
+      onUpdatePrompt(generatePrompt());
+    }
+  }, [selectedChapterId, customInterpretations, onUpdatePrompt]);
+
+  const handleAskAI = () => {
+    if (!onAskAI) return;
+    onAskAI(generatePrompt());
   };
 
   return (

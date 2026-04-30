@@ -264,7 +264,7 @@ ${annotation ? `【用户批注】\n${annotation}` : ''}`;
                 key={num}
                 onClick={() => setSelectedChapterId(num)}
                 title={`第 ${num} 章`}
-                className={`w-full aspect-square text-[10px] flex items-center justify-center transition-colors font-sans ${itemClasses}`}
+                className={`w-full aspect-square text-[10px] flex items-center justify-center transition-colors font-sans outline-none ${itemClasses}`}
               >
                 {num}
               </button>
