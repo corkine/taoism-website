@@ -33,6 +33,18 @@ export const AI_PRESETS = {
     suggest_model: ['MiniMax-M2.7', 'MiniMax-M2.5'],
     website: 'https://platform.minimaxi.com/'
   },
+  xiaomi_mimo_token: {
+    label: '小米 Mimo Token Plan',
+    endpoint: 'https://token-plan-cn.xiaomimimo.com/v1',
+    suggest_model: ['mimo-v2.5', 'mimo-v2-pro', 'mimo-v2-flash'],
+    website: 'https://platform.xiaomimimo.com/docs/zh-CN/welcome'
+  },
+  xiaomi_mimo_api: {
+    label: '小米 Mimo API',
+    endpoint: 'https://api.xiaomimimo.com/v1',
+    suggest_model: ['mimo-v2.5', 'mimo-v2-pro', 'mimo-v2-flash'],
+    website: 'https://platform.xiaomimimo.com/docs/zh-CN/welcome'
+  },
   custom: {
     label: '自定义',
     endpoint: '',
