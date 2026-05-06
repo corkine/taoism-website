@@ -14,6 +14,30 @@ interface ChapterContentProps {
   onUpdatePrompt?: (systemPrompt: string) => void;
 }
 
+const InterpretationEditor = React.forwardRef<{ getValue: () => string }, { initialValue: string }>(
+  ({ initialValue }, ref) => {
+    const [value, setValue] = useState(initialValue);
+    
+    React.useImperativeHandle(ref, () => ({
+      getValue: () => value
+    }));
+
+    return (
+      <div className="grid">
+        <textarea
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          className="col-start-1 row-start-1 w-full min-h-[160px] p-6 bg-[#FDFBF7] border border-[#E2DED0] outline-none text-sm font-serif leading-relaxed focus:border-[#A63A2B] transition-colors resize-none shadow-inner overflow-hidden"
+          placeholder="谈谈您的见解..."
+        />
+        <div className="col-start-1 row-start-1 w-full min-h-[160px] p-6 text-sm font-serif leading-relaxed border border-transparent whitespace-pre-wrap invisible pointer-events-none break-words">
+          {value + ' '}
+        </div>
+      </div>
+    );
+  }
+);
+
 export function ChapterContent({
   bookId,
   chapters,
@@ -22,33 +46,17 @@ export function ChapterContent({
   onAskAI,
   onUpdatePrompt,
 }: ChapterContentProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   // Local state for interpretations
   const [customInterpretations, setCustomInterpretations] = useState<Record<number, string>>(() =>
     loadInterpretations(bookId)
   );
   const [editingLocId, setEditingLocId] = useState<number | null>(null);
-  const [tempInterpretation, setTempInterpretation] = useState('');
+  const editorRef = useRef<{ getValue: () => string }>(null);
 
   // Sync state when bookId changes
   useEffect(() => {
     setCustomInterpretations(loadInterpretations(bookId));
   }, [bookId]);
-
-  const adjustHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  };
-
-  useLayoutEffect(() => {
-    if (editingLocId === selectedChapterId) {
-      adjustHeight();
-    }
-  }, [tempInterpretation, editingLocId, selectedChapterId]);
 
   const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
@@ -125,7 +133,6 @@ ${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
               <button
                 onClick={() => {
                   setEditingLocId(selectedChapterId);
-                  setTempInterpretation(customInterpretations[selectedChapterId] || '');
                 }}
                 className="text-xs text-[#A63A2B] hover:underline font-sans font-bold flex items-center gap-1"
               >
@@ -138,7 +145,8 @@ ${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
                 </button>
                 <button
                   onClick={() => {
-                    const next = { ...customInterpretations, [selectedChapterId]: tempInterpretation };
+                    const finalValue = editorRef.current?.getValue() || '';
+                    const next = { ...customInterpretations, [selectedChapterId]: finalValue };
                     saveInterpretations(bookId, next, true);
                     setCustomInterpretations(next);
                     setEditingLocId(null);
@@ -152,12 +160,9 @@ ${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
           </div>
 
           {editingLocId === selectedChapterId ? (
-            <textarea
-              ref={textareaRef}
-              value={tempInterpretation}
-              onChange={e => setTempInterpretation(e.target.value)}
-              className="w-full min-h-[160px] p-6 bg-[#FDFBF7] border border-[#E2DED0] outline-none text-sm font-serif leading-relaxed focus:border-[#A63A2B] transition-colors resize-none shadow-inner overflow-hidden"
-              placeholder="谈谈您的见解..."
+            <InterpretationEditor
+              ref={editorRef}
+              initialValue={customInterpretations[selectedChapterId] || ''}
             />
           ) : (
             <div className="text-[13px] text-[#3D3D3D] leading-loose whitespace-pre-wrap px-4 border-l-2 border-[#E2DED0]">
