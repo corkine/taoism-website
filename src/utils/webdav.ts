@@ -8,7 +8,11 @@ export const WEBDAV_REMOTE_PATH = '/daoism_backup.json';
 export async function fetchRemoteData(cfg: WebDAVConfig): Promise<any> {
   const res = await fetch(cfg.url + WEBDAV_REMOTE_PATH, {
     method: 'GET',
-    headers: { Authorization: getAuthHeader(cfg.username, cfg.password) },
+    headers: {
+      Authorization: getAuthHeader(cfg.username, cfg.password),
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
   });
   if (res.status === 404) return null;
   if (res.status === 401) throw new Error('认证失败，请检查用户名和密码');
