@@ -1,308 +1,457 @@
 /**
  * useAppStore.ts
  *
- * Centralized application state powered by zustand.
+ * Centralized application state powered by zustand + persist middleware.
  *
- * All mutations are driven through this store so that both local edits and
- * WebDAV restore/sync can update the UI reactively — without needing a page
- * reload to re-read data from localStorage.
+ * Persistence strategy:
+ *   - A single localStorage key (`taoism_app_state_v1`) stores the whole
+ *     persisted slice via zustand's `persist` middleware.
+ *   - Ephemeral runtime state (e.g. `syncState`) is excluded via `partialize`.
+ *   - No manual load/save calls — `set(...)` is enough; persistence is
+ *     handled automatically.
  *
- * localStorage is still used as the persistence layer; the store acts as the
- * single in-memory source of truth that mirrors it.
+ * Backup / WebDAV data interchange uses the `BackupData` format (see
+ * `src/types.ts`) which is independent of the local persistence layout.  The
+ * pure helpers below (build / parse / merge / export) operate only on
+ * `BackupData` objects and do not touch localStorage directly.
  */
 
 import { create } from 'zustand';
-import {
-    loadPartitions,
-    savePartitions,
-    loadInterpretations,
-    saveInterpretations,
-    loadAISettings,
-    saveAISettings,
-    loadWebDAVConfig,
-    saveWebDAVConfig,
-    getDirtySince,
-    markDirty as storageMarkDirty,
-    clearDirty as storageClearDirty,
-    restoreBackupData,
-    buildBackupData,
-    mergeBackupData,
-    touchLocalWriteTime,
-    saveRemoteSyncTime,
-    getRemoteSyncTime,
-    isDirty as isStorageDirty,
-} from '../utils/storage';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { fetchRemoteData, pushBackupToRemote } from '../utils/webdav';
 import { formatTime } from '../utils/time';
 import { BOOKS } from '../data/book';
+import { DEFAULT_AI_SETTINGS } from '../data/aiPresets';
 import {
     AISettings,
+    BackupData,
+    Conflict,
     GlobalSyncStatus,
     MainSection,
+    NormalizedState,
     SyncState,
     WebDAVConfig,
 } from '../types';
 
-const DEFAULT_AI_SETTINGS: AISettings = {
-    endpoint: '',
-    apiKey: '',
-    model: '',
-};
+const PERSIST_KEY = 'taoism_app_state_v1';
 
-function hydrateBooks() {
+// ── Backup / restore pure helpers ───────────────────────────────────
+
+/** Build a backup object from the current in-memory state. */
+function buildBackupData(state: NormalizedState, includeAI: boolean = true): BackupData {
+    const booksData: BackupData['books'] = {};
+    const bookIds = new Set([
+        ...Object.keys(state.partitions || {}),
+        ...Object.keys(state.interpretations || {}),
+    ]);
+    for (const bookId of bookIds) {
+        booksData[bookId] = {
+            partitions: state.partitions?.[bookId],
+            interpretations: state.interpretations?.[bookId],
+        };
+    }
+    const data: BackupData = {
+        version: 2,
+        type: 'daoism_backup',
+        syncedAt: new Date().toISOString(),
+        books: booksData,
+    };
+    if (includeAI && state.aiSettings) {
+        data.aiSettings = state.aiSettings;
+    }
+    return data;
+}
+
+/** Parse a backup object into normalized state.  Throws on unknown format. */
+function parseBackupData(data: any): NormalizedState {
+    if (!data || data.type !== 'daoism_backup' || !data.books) {
+        throw new Error('无法识别的备份文件格式');
+    }
     const partitions: Record<string, MainSection[]> = {};
     const interpretations: Record<string, Record<number, string>> = {};
-    for (const book of BOOKS) {
-        partitions[book.id] = loadPartitions(book.id, book.defaultPartitions);
-        interpretations[book.id] = loadInterpretations(book.id);
+    for (const bookId of Object.keys(data.books)) {
+        const entry = data.books[bookId] || {};
+        if (entry.partitions) partitions[bookId] = entry.partitions;
+        if (entry.interpretations) interpretations[bookId] = entry.interpretations;
     }
-    return { partitions, interpretations };
+    return {
+        partitions,
+        interpretations,
+        aiSettings: data.aiSettings ?? null,
+    };
 }
+
+/** Merge two backup objects and return merged result plus conflicts. */
+function mergeBackupData(local: BackupData, remote: BackupData): { mergedData: BackupData; conflicts: Conflict[] } {
+    const conflicts: Conflict[] = [];
+    const merged: BackupData = {
+        ...local,
+        syncedAt: new Date().toISOString(),
+        books: { ...local.books },
+    };
+
+    const remoteBooks = remote.books || {};
+    const localBooks = local.books || {};
+    const allBookIds = new Set([...Object.keys(localBooks), ...Object.keys(remoteBooks)]);
+
+    for (const bookId of allBookIds) {
+        const localBook = localBooks[bookId] || { partitions: [], interpretations: {} };
+        const remoteBook = remoteBooks[bookId] || { partitions: [], interpretations: {} };
+
+        const mergedPartitions = [...(localBook.partitions || [])];
+        for (const r of (remoteBook.partitions || [])) {
+            const exists = mergedPartitions.find((l: any) => l.id === r.id);
+            if (!exists) {
+                mergedPartitions.push(r);
+            } else if (JSON.stringify(exists) !== JSON.stringify(r)) {
+                conflicts.push({
+                    type: 'partition',
+                    bookId,
+                    key: r.id,
+                    local: '本地分卷配置',
+                    remote: '远端分卷配置',
+                });
+                mergedPartitions.push({
+                    ...r,
+                    id: `${r.id}_remote_${Math.floor(Math.random() * 1000)}`,
+                });
+            }
+        }
+
+        const mergedInterpretations: Record<number, string> = { ...(localBook.interpretations || {}) };
+        const remoteInterp = remoteBook.interpretations || {};
+        const remoteTime = remote.syncedAt || '未知时间';
+        const localTime = local.syncedAt || new Date().toISOString();
+
+        for (const [key, rVal] of Object.entries(remoteInterp)) {
+            const numKey = Number(key);
+            const lVal = mergedInterpretations[numKey];
+            if (lVal === undefined) {
+                mergedInterpretations[numKey] = rVal as string;
+            } else if (lVal !== rVal) {
+                if (!String(lVal).includes(String(rVal)) && !String(rVal).includes(String(lVal))) {
+                    conflicts.push({
+                        type: 'interpretation',
+                        bookId,
+                        key,
+                        local: String(lVal),
+                        remote: String(rVal),
+                    });
+                    const rTimeStr = new Date(remoteTime).toLocaleString('zh-CN');
+                    const lTimeStr = new Date(localTime).toLocaleString('zh-CN');
+                    mergedInterpretations[numKey] = `[远端 ${rTimeStr}]:\n${rVal}\n\n[本地 ${lTimeStr}]:\n${lVal}`;
+                }
+            }
+        }
+
+        merged.books[bookId] = {
+            partitions: mergedPartitions,
+            interpretations: mergedInterpretations,
+        };
+    }
+
+    if (remote.aiSettings && !local.aiSettings) {
+        merged.aiSettings = remote.aiSettings;
+    }
+
+    return { mergedData: merged, conflicts };
+}
+
+/** Trigger a browser file download for the given backup object. */
+function downloadBackupFile(data: BackupData, filename: string = 'daoism_data.json'): void {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// ── Store ───────────────────────────────────────────────────────────
 
 export interface SyncResult {
     needsConfirm: boolean;
-    conflicts?: any[];
-    mergedData?: any;
+    conflicts?: Conflict[];
+    mergedData?: BackupData;
 }
 
 interface AppState {
-    // ── Book data ────────────────────────────────────────────────────
+    // ── Persisted state ─────────────────────────────────────────────
     partitions: Record<string, MainSection[]>;
     interpretations: Record<string, Record<number, string>>;
-
-    // ── Dirty flag ──────────────────────────────────────────────────
-    dirtySince: string | null;
-
-    // ── WebDAV ──────────────────────────────────────────────────────
-    webdavConfig: WebDAVConfig | null;
-    syncState: SyncState;
-
-    // ── AI ──────────────────────────────────────────────────────────
     aiSettings: AISettings;
+    webdavConfig: WebDAVConfig | null;
+    /** ISO timestamp of the earliest unsaved change; null when clean. */
+    dirtySince: string | null;
+    /** ISO timestamp of the last local write (conflict-detection helper). */
+    localLastWrite: string | null;
+    /** The `syncedAt` of the remote file when we last successfully synced. */
+    remoteLastSync: string | null;
+
+    // ── Ephemeral runtime state (NOT persisted) ─────────────────────
+    syncState: SyncState;
 
     // ── Actions: book data ──────────────────────────────────────────
     setPartitions: (bookId: string, partitions: MainSection[]) => void;
     setInterpretation: (bookId: string, chapterId: number, value: string) => void;
 
-    // ── Actions: dirty ──────────────────────────────────────────────
+    // ── Actions: dirty flag ─────────────────────────────────────────
     markDirty: () => void;
     clearDirty: () => void;
 
     // ── Actions: WebDAV config ──────────────────────────────────────
     setWebdavConfig: (cfg: WebDAVConfig) => void;
 
-    // ── Actions: AI ─────────────────────────────────────────────────
+    // ── Actions: AI settings ────────────────────────────────────────
     setAISettings: (s: AISettings) => void;
 
-    // ── Actions: sync operations ────────────────────────────────────
+    // ── Actions: sync orchestration ─────────────────────────────────
     setSyncStatus: (status: GlobalSyncStatus, message?: string, time?: string) => void;
     triggerUpload: () => Promise<void>;
     triggerDownload: () => Promise<{ needsReload: boolean }>;
     triggerSync: () => Promise<SyncResult & { needsReload?: boolean }>;
-    finalizeSync: (mergedData: any) => Promise<void>;
+    finalizeSync: (mergedData: BackupData) => Promise<void>;
 
-    // ── Actions: backup apply (reactive hydrate) ────────────────────
-    applyBackupData: (data: any) => void;
+    // ── Backup helpers ──────────────────────────────────────────────
+    applyBackupData: (data: unknown) => void;
+    currentBackup: (includeAI?: boolean) => BackupData;
+    exportToFile: (includeAI?: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-    ...hydrateBooks(),
-    dirtySince: getDirtySince(),
-    webdavConfig: loadWebDAVConfig(),
-    syncState: { status: 'idle', message: '', lastSyncTime: null },
-    aiSettings: loadAISettings(DEFAULT_AI_SETTINGS) as AISettings,
+/** Derive the normalized slice used to build backup objects. */
+function pickNormalized(state: AppState): NormalizedState {
+    return {
+        partitions: state.partitions,
+        interpretations: state.interpretations,
+        aiSettings: state.aiSettings,
+    };
+}
 
-    // ── Book actions ────────────────────────────────────────────────
-    setPartitions: (bookId, parts) => {
-        savePartitions(bookId, parts);
-        const now = new Date().toISOString();
-        storageMarkDirty();
-        set(state => ({
-            partitions: { ...state.partitions, [bookId]: parts },
-            dirtySince: now,
-        }));
-    },
+export const useAppStore = create<AppState>()(
+    persist(
+        (set, get) => ({
+            // ── Initial state ───────────────────────────────────────
+            partitions: {},
+            interpretations: {},
+            aiSettings: { ...DEFAULT_AI_SETTINGS },
+            webdavConfig: null,
+            dirtySince: null,
+            localLastWrite: null,
+            remoteLastSync: null,
+            syncState: { status: 'idle', message: '', lastSyncTime: null },
 
-    setInterpretation: (bookId, chapterId, value) => {
-        const current = get().interpretations[bookId] || {};
-        const next = { ...current, [chapterId]: value };
-        saveInterpretations(bookId, next, false); // do not double-mark
-        storageMarkDirty();
-        const now = new Date().toISOString();
-        set(state => ({
-            interpretations: { ...state.interpretations, [bookId]: next },
-            dirtySince: now,
-        }));
-    },
+            // ── Book actions ────────────────────────────────────────
+            setPartitions: (bookId, parts) => {
+                const now = new Date().toISOString();
+                set(state => ({
+                    partitions: { ...state.partitions, [bookId]: parts },
+                    dirtySince: now,
+                    localLastWrite: now,
+                }));
+            },
 
-    // ── Dirty ───────────────────────────────────────────────────────
-    markDirty: () => {
-        storageMarkDirty();
-        set({ dirtySince: new Date().toISOString() });
-    },
-    clearDirty: () => {
-        storageClearDirty();
-        set({ dirtySince: null });
-    },
+            setInterpretation: (bookId, chapterId, value) => {
+                const now = new Date().toISOString();
+                set(state => ({
+                    interpretations: {
+                        ...state.interpretations,
+                        [bookId]: { ...(state.interpretations[bookId] || {}), [chapterId]: value },
+                    },
+                    dirtySince: now,
+                    localLastWrite: now,
+                }));
+            },
 
-    // ── WebDAV config ───────────────────────────────────────────────
-    setWebdavConfig: (cfg) => {
-        saveWebDAVConfig(cfg);
-        set({ webdavConfig: cfg });
-    },
+            // ── Dirty flag ──────────────────────────────────────────
+            markDirty: () => set({ dirtySince: new Date().toISOString() }),
+            clearDirty: () => set({ dirtySince: null }),
 
-    // ── AI ──────────────────────────────────────────────────────────
-    setAISettings: (s) => {
-        saveAISettings(s, false);
-        storageMarkDirty();
-        set({ aiSettings: s, dirtySince: new Date().toISOString() });
-    },
+            // ── WebDAV config ───────────────────────────────────────
+            setWebdavConfig: (cfg) => set({ webdavConfig: cfg }),
 
-    // ── Sync status helper ──────────────────────────────────────────
-    setSyncStatus: (status, message = '', time) => {
-        set({
-            syncState: { status, message, lastSyncTime: time ?? null },
-        });
-    },
+            // ── AI settings ─────────────────────────────────────────
+            setAISettings: (s) => {
+                const now = new Date().toISOString();
+                set({ aiSettings: s, dirtySince: now, localLastWrite: now });
+            },
 
-    // ── Upload ──────────────────────────────────────────────────────
-    triggerUpload: async () => {
-        const cfg = get().webdavConfig ?? loadWebDAVConfig();
-        if (!cfg?.url) return;
-        get().setSyncStatus('syncing', '正在上传数据…');
-        try {
-            const syncedAt = await pushBackupToRemote(cfg);
-            saveRemoteSyncTime(syncedAt);
-            touchLocalWriteTime();
-            get().clearDirty();
-            get().setSyncStatus('success', '上传成功', formatTime(syncedAt));
-        } catch (e: any) {
-            get().setSyncStatus('error', e.message || '上传失败');
+            // ── Sync status helper ──────────────────────────────────
+            setSyncStatus: (status, message = '', time) => {
+                set({ syncState: { status, message, lastSyncTime: time ?? null } });
+            },
+
+            // ── Upload ──────────────────────────────────────────────
+            triggerUpload: async () => {
+                const cfg = get().webdavConfig;
+                if (!cfg?.url) return;
+                get().setSyncStatus('syncing', '正在上传数据…');
+                try {
+                    const payload = buildBackupData(pickNormalized(get()), true);
+                    const syncedAt = await pushBackupToRemote(cfg, payload);
+                    set({
+                        remoteLastSync: syncedAt,
+                        localLastWrite: new Date().toISOString(),
+                        dirtySince: null,
+                    });
+                    get().setSyncStatus('success', '上传成功', formatTime(syncedAt));
+                } catch (e: any) {
+                    get().setSyncStatus('error', e.message || '上传失败');
+                }
+            },
+
+            // ── Download ────────────────────────────────────────────
+            triggerDownload: async () => {
+                const cfg = get().webdavConfig;
+                if (!cfg?.url) return { needsReload: false };
+                get().setSyncStatus('syncing', '正在下载数据…');
+                try {
+                    const data = await fetchRemoteData(cfg);
+                    if (!data) {
+                        get().setSyncStatus('error', '远程尚无备份文件，请先上传');
+                        return { needsReload: false };
+                    }
+                    get().applyBackupData(data);
+                    set({
+                        remoteLastSync: data.syncedAt,
+                        localLastWrite: new Date().toISOString(),
+                        dirtySince: null,
+                    });
+                    const t = data.syncedAt ? formatTime(data.syncedAt) : '';
+                    get().setSyncStatus('success', '下载并恢复成功', t);
+                    return { needsReload: false };
+                } catch (e: any) {
+                    get().setSyncStatus('error', e.message || '下载失败');
+                    return { needsReload: false };
+                }
+            },
+
+            // ── Sync (two-way) ──────────────────────────────────────
+            triggerSync: async () => {
+                const cfg = get().webdavConfig;
+                if (!cfg?.url) return { needsConfirm: false };
+
+                if (get().dirtySince === null) {
+                    const res = await get().triggerDownload();
+                    return { needsConfirm: false, needsReload: res.needsReload };
+                }
+
+                get().setSyncStatus('syncing', '正在获取远程数据并准备合并…');
+                try {
+                    const remoteData = await fetchRemoteData(cfg);
+                    if (!remoteData) {
+                        await get().triggerUpload();
+                        return { needsConfirm: false };
+                    }
+
+                    const lastRemoteTime = get().remoteLastSync;
+                    const currentRemoteTime = remoteData.syncedAt;
+                    if (lastRemoteTime && currentRemoteTime && currentRemoteTime <= lastRemoteTime) {
+                        await get().triggerUpload();
+                        return { needsConfirm: false };
+                    }
+
+                    const localData = buildBackupData(pickNormalized(get()), true);
+                    const { mergedData, conflicts } = mergeBackupData(localData, remoteData);
+
+                    if (conflicts.length > 0) {
+                        get().setSyncStatus('idle', '发现合并冲突，请确认');
+                        return { needsConfirm: true, conflicts, mergedData };
+                    }
+
+                    get().setSyncStatus('syncing', '正在同步合并后的数据…');
+                    await pushBackupToRemote(cfg, mergedData);
+                    get().applyBackupData(mergedData);
+                    set({
+                        remoteLastSync: mergedData.syncedAt,
+                        localLastWrite: new Date().toISOString(),
+                        dirtySince: null,
+                    });
+                    get().setSyncStatus('success', '同步成功', formatTime(mergedData.syncedAt));
+                    return { needsConfirm: false, needsReload: false };
+                } catch (e: any) {
+                    get().setSyncStatus('error', e.message || '同步失败');
+                    return { needsConfirm: false };
+                }
+            },
+
+            // ── Finalize (after user resolves conflicts) ────────────
+            finalizeSync: async (mergedData) => {
+                const cfg = get().webdavConfig;
+                if (!cfg?.url || !mergedData) return;
+
+                get().setSyncStatus('syncing', '正在应用合并结果…');
+                try {
+                    await pushBackupToRemote(cfg, mergedData);
+                    get().applyBackupData(mergedData);
+                    set({
+                        remoteLastSync: mergedData.syncedAt,
+                        localLastWrite: new Date().toISOString(),
+                        dirtySince: null,
+                    });
+                    get().setSyncStatus('success', '同步成功', formatTime(mergedData.syncedAt));
+                } catch (e: any) {
+                    get().setSyncStatus('error', e.message || '同步失败');
+                    throw e;
+                }
+            },
+
+            // ── Apply backup (file import or remote download) ───────
+            applyBackupData: (data) => {
+                const parsed = parseBackupData(data);
+                set(state => ({
+                    partitions: parsed.partitions,
+                    interpretations: parsed.interpretations,
+                    aiSettings: parsed.aiSettings ?? state.aiSettings,
+                }));
+            },
+
+            // ── Backup helpers ──────────────────────────────────────
+            currentBackup: (includeAI = true) => buildBackupData(pickNormalized(get()), includeAI),
+            exportToFile: (includeAI = false) => {
+                const data = buildBackupData(pickNormalized(get()), includeAI);
+                downloadBackupFile(data);
+            },
+        }),
+        {
+            name: PERSIST_KEY,
+            storage: createJSONStorage(() => localStorage),
+            version: 1,
+            // Persist everything except the ephemeral sync runtime state.
+            partialize: (state) => ({
+                partitions: state.partitions,
+                interpretations: state.interpretations,
+                aiSettings: state.aiSettings,
+                webdavConfig: state.webdavConfig,
+                dirtySince: state.dirtySince,
+                localLastWrite: state.localLastWrite,
+                remoteLastSync: state.remoteLastSync,
+            }),
         }
-    },
-
-    // ── Download ────────────────────────────────────────────────────
-    triggerDownload: async () => {
-        const cfg = get().webdavConfig ?? loadWebDAVConfig();
-        if (!cfg?.url) return { needsReload: false };
-        get().setSyncStatus('syncing', '正在下载数据…');
-        try {
-            const data = await fetchRemoteData(cfg);
-            if (!data) {
-                get().setSyncStatus('error', '远程尚无备份文件，请先上传');
-                return { needsReload: false };
-            }
-            get().applyBackupData(data);
-            saveRemoteSyncTime(data.syncedAt);
-            touchLocalWriteTime();
-            get().clearDirty();
-            const t = data.syncedAt ? formatTime(data.syncedAt) : '';
-            get().setSyncStatus('success', '下载并恢复成功', t);
-            // needsReload kept for backwards-compat with callers but no longer true
-            return { needsReload: false };
-        } catch (e: any) {
-            get().setSyncStatus('error', e.message || '下载失败');
-            return { needsReload: false };
-        }
-    },
-
-    // ── Sync (two-way) ──────────────────────────────────────────────
-    triggerSync: async () => {
-        const cfg = get().webdavConfig ?? loadWebDAVConfig();
-        if (!cfg?.url) return { needsConfirm: false };
-
-        if (!isStorageDirty()) {
-            // If not dirty, remote may have changed — simply pull
-            const res = await get().triggerDownload();
-            return { needsConfirm: false, needsReload: res.needsReload };
-        }
-
-        get().setSyncStatus('syncing', '正在获取远程数据并准备合并…');
-        try {
-            const remoteData = await fetchRemoteData(cfg);
-            if (!remoteData) {
-                await get().triggerUpload();
-                return { needsConfirm: false };
-            }
-
-            const lastRemoteTime = getRemoteSyncTime();
-            const currentRemoteTime = remoteData.syncedAt;
-
-            if (lastRemoteTime && currentRemoteTime && currentRemoteTime <= lastRemoteTime) {
-                // Remote hasn't changed — safe to overwrite with local
-                await get().triggerUpload();
-                return { needsConfirm: false };
-            }
-
-            const localData = buildBackupData();
-            const { mergedData, conflicts } = mergeBackupData(localData, remoteData);
-
-            if (conflicts.length > 0) {
-                get().setSyncStatus('idle', '发现合并冲突，请确认');
-                return { needsConfirm: true, conflicts, mergedData };
-            }
-
-            get().setSyncStatus('syncing', '正在同步合并后的数据…');
-            await pushBackupToRemote(cfg, mergedData);
-            get().applyBackupData(mergedData);
-            saveRemoteSyncTime(mergedData.syncedAt);
-            touchLocalWriteTime();
-            get().clearDirty();
-            get().setSyncStatus('success', '同步成功', formatTime(mergedData.syncedAt));
-            return { needsConfirm: false, needsReload: false };
-        } catch (e: any) {
-            get().setSyncStatus('error', e.message || '同步失败');
-            return { needsConfirm: false };
-        }
-    },
-
-    // ── Finalize (conflict-resolved) ────────────────────────────────
-    finalizeSync: async (mergedData) => {
-        const cfg = get().webdavConfig ?? loadWebDAVConfig();
-        if (!cfg?.url || !mergedData) return;
-
-        get().setSyncStatus('syncing', '正在应用合并结果…');
-        try {
-            await pushBackupToRemote(cfg, mergedData);
-            get().applyBackupData(mergedData);
-            saveRemoteSyncTime(mergedData.syncedAt);
-            touchLocalWriteTime();
-            get().clearDirty();
-            get().setSyncStatus('success', '同步成功', formatTime(mergedData.syncedAt));
-        } catch (e: any) {
-            get().setSyncStatus('error', e.message || '同步失败');
-            throw e;
-        }
-    },
-
-    // ── Reactive hydrate from backup object ─────────────────────────
-    applyBackupData: (data) => {
-        // Persist to localStorage first
-        restoreBackupData(data);
-        // Then mirror into zustand so all subscribers re-render
-        const { partitions, interpretations } = hydrateBooks();
-        const aiSettings = loadAISettings(DEFAULT_AI_SETTINGS) as AISettings;
-        set({
-            partitions,
-            interpretations,
-            aiSettings,
-        });
-    },
-}));
+    )
+);
 
 // ── Selector helpers ────────────────────────────────────────────────
+
+// Stable references for empty fallbacks — critical to avoid returning a new
+// array/object from the selector on every render (which would cause
+// `useSyncExternalStore` to report "getSnapshot should be cached" and loop).
+const EMPTY_PARTITIONS: MainSection[] = [];
+const EMPTY_INTERPRETATIONS: Record<number, string> = {};
 
 /** Get partitions for a book, falling back to defaults if not yet hydrated. */
 export function usePartitions(bookId: string): MainSection[] {
     return useAppStore(state => {
         const p = state.partitions[bookId];
-        if (p) return p;
+        if (p && p.length > 0) return p;
         const def = BOOKS.find(b => b.id === bookId)?.defaultPartitions;
-        return def ?? [];
+        return def ?? EMPTY_PARTITIONS;
     });
 }
 
 /** Get interpretations map for a book. */
 export function useInterpretations(bookId: string): Record<number, string> {
-    return useAppStore(state => state.interpretations[bookId] ?? {});
+    return useAppStore(state => state.interpretations[bookId] ?? EMPTY_INTERPRETATIONS);
 }

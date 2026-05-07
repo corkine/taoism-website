@@ -3,9 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { NavLink } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
-import { useWebDAVSync } from '../hooks/useWebDAVSync';
 import { CloudUpload } from 'lucide-react';
-import { exportDataToFile } from '../utils/storage';
 import { useAppStore } from '../store/useAppStore';
 import { AboutModals } from './Modals';
 
@@ -20,11 +18,17 @@ export const Header = React.memo(({
   const isDirty = useAppStore(s => s.dirtySince !== null);
   const applyBackupData = useAppStore(s => s.applyBackupData);
   const clearDirty = useAppStore(s => s.clearDirty);
-  const { syncState, webdavConfig, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
+  const syncState = useAppStore(s => s.syncState);
+  const webdavConfig = useAppStore(s => s.webdavConfig);
+  const triggerUpload = useAppStore(s => s.triggerUpload);
+  const triggerDownload = useAppStore(s => s.triggerDownload);
+  const triggerSync = useAppStore(s => s.triggerSync);
+  const finalizeSync = useAppStore(s => s.finalizeSync);
+  const exportToFile = useAppStore(s => s.exportToFile);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   const handleGlobalExport = () => {
-    exportDataToFile(false);
+    exportToFile(false);
     // After a successful export the local copy is safely persisted elsewhere.
     clearDirty();
   };

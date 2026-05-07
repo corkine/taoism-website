@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAIChat } from '../hooks/useAIChat';
 import { AISettingsModal } from './AISettingsModal';
-import { useAISettings } from '../hooks/useAISettings';
+import { useAppStore } from '../store/useAppStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 
 interface AIModalProps {
@@ -48,7 +48,8 @@ export function AIModal({
   systemPrompt,
   initialUserMessage,
 }: AIModalProps) {
-  const { settings, saveSettings } = useAISettings();
+  const settings = useAppStore(s => s.aiSettings);
+  const saveSettings = useAppStore(s => s.setAISettings);
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } =
     useAIChat(settings);
 

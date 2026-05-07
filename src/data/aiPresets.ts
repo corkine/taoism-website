@@ -1,6 +1,13 @@
-import { useAppStore } from '../store/useAppStore';
-import { AISettings } from '../types';
+import type { AISettings } from '../types';
 
+/** Default (empty) AI settings used on first launch. */
+export const DEFAULT_AI_SETTINGS: AISettings = {
+  endpoint: '',
+  apiKey: '',
+  model: '',
+};
+
+/** Presets for popular Chinese AI service providers. */
 export const AI_PRESETS = {
   aliyun: {
     label: '通义千问',
@@ -50,25 +57,3 @@ export const AI_PRESETS = {
     suggest_model: []
   }
 } as const;
-
-const DEFAULT_SETTINGS: AISettings = {
-  endpoint: '',
-  apiKey: '',
-  model: '',
-};
-
-/**
- * Backwards-compatible hook.  State now lives in the centralized zustand
- * store so that restores from WebDAV / file import immediately reflect in
- * the UI without a reload.
- *
- * `DEFAULT_SETTINGS` is kept for documentation purposes — the store
- * initializes with the same defaults.
- */
-export function useAISettings() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _defaults = DEFAULT_SETTINGS;
-  const settings = useAppStore(s => s.aiSettings);
-  const saveSettings = useAppStore(s => s.setAISettings);
-  return { settings, saveSettings };
-}

@@ -46,3 +46,33 @@ export interface AISettings {
   apiKey: string;
   model: string;
 }
+
+// ─── Backup / restore data contracts ───────────────────────────────────────
+
+/** Normalized in-memory state used to build backup objects. */
+export interface NormalizedState {
+  partitions: Record<string, MainSection[]>;
+  interpretations: Record<string, Record<number, string>>;
+  aiSettings?: AISettings | null;
+}
+
+/** Shape of the backup object persisted to WebDAV / exported file. */
+export interface BackupData {
+  version: number;
+  type: 'daoism_backup';
+  syncedAt: string;
+  books: Record<string, {
+    partitions?: MainSection[];
+    interpretations?: Record<number, string>;
+  }>;
+  aiSettings?: AISettings | null;
+}
+
+/** Single conflict entry produced by merging two backup objects. */
+export interface Conflict {
+  type: 'partition' | 'interpretation';
+  bookId: string;
+  key: string | number;
+  local: string;
+  remote: string;
+}
