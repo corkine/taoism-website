@@ -17,6 +17,7 @@ import {
 import { useAIChat } from '../hooks/useAIChat';
 import { AISettingsModal } from './AISettingsModal';
 import { useAISettings } from '../hooks/useAISettings';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface AIModalProps {
   isOpen: boolean;
@@ -66,13 +67,7 @@ export function AIModal({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Mobile detection (check once on mount)
-  useEffect(() => {
-    setIsMobile(window.matchMedia('(max-width: 767px)').matches);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const isMobile = useIsMobile();
 
   // Auto-scroll
   useEffect(() => {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Edit2, AtSign } from 'lucide-react';
+import { Plus, Trash2, Edit2, AtSign, ChevronDown } from 'lucide-react';
 import { MainSectionModal, SubSectionModal } from './SectionModals';
 import { BOOKS } from '../data/book';
 import { loadPartitions, savePartitions, loadInterpretations, markDirty } from '../utils/storage';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { MainSection, SubSection } from '../types';
 
 interface SidebarProps {
@@ -38,6 +39,13 @@ export const Sidebar = React.memo(({
 }: SidebarProps) => {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
   const chaptersCount = bookConfig.content.length;
+
+  const isMobile = useIsMobile();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    setIsCollapsed(isMobile);
+  }, [isMobile]);
 
   // --- Section Management Logic (Simplified) ---
   const [mainSections, setMainSections] = useState<MainSection[]>(() =>
@@ -276,7 +284,16 @@ ${annotation ? `【用户批注】\n${annotation}` : ''}`;
       {/* Classification Section */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-[#1A1A1A] font-sans">分章定义</h3>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-[#1A1A1A] font-sans hover:text-[#A63A2B] transition-colors"
+          >
+            分章定义
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+            />
+          </button>
           <button
             onClick={() => openEditMain()}
             className="p-1.5 hover:bg-[#A63A2B]/10 rounded-full text-[#A63A2B] transition-colors"
@@ -286,6 +303,7 @@ ${annotation ? `【用户批注】\n${annotation}` : ''}`;
           </button>
         </div>
 
+        {!isCollapsed && (
         <div className="space-y-6">
           {mainSections.map((section, idx) => {
             const isActiveMainSection =
@@ -402,6 +420,7 @@ ${annotation ? `【用户批注】\n${annotation}` : ''}`;
             );
           })}
         </div>
+        )}
       </div>
 
       <MainSectionModal
