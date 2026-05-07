@@ -66,6 +66,13 @@ export function AIModal({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection (check once on mount)
+  useEffect(() => {
+    setIsMobile(window.matchMedia('(max-width: 767px)').matches);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -100,7 +107,7 @@ export function AIModal({
   }, [isStreaming, isOpen]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!modalRef.current) return;
+    if (isMobile || !modalRef.current) return;
     const rect = modalRef.current.getBoundingClientRect();
     dragState.current = {
       dragging: true,
@@ -108,7 +115,7 @@ export function AIModal({
       oy: e.clientY - rect.top,
     };
     e.preventDefault();
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -160,9 +167,11 @@ export function AIModal({
 
   if (!isOpen) return null;
 
-  const modalStyle: React.CSSProperties = pos
-    ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' }
-    : { position: 'fixed', right: 24, bottom: 24 };
+  const modalStyle: React.CSSProperties = isMobile
+    ? { position: 'fixed', inset: 0 }
+    : pos
+      ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' }
+      : { position: 'fixed', right: 24, bottom: 24 };
 
   return (
     <>
@@ -179,11 +188,11 @@ export function AIModal({
         ref={modalRef}
         style={{
           ...modalStyle,
-          width: 420,
+          width: isMobile ? '100%' : 420,
           zIndex: 150,
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: '75vh',
+          maxHeight: isMobile ? '100vh' : '75vh',
           boxShadow: '0 24px 64px rgba(26,26,26,0.22), 0 4px 16px rgba(26,26,26,0.12)',
           background: '#FDFBF7',
           borderTop: '3px solid #A63A2B',
