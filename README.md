@@ -2,7 +2,6 @@
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Gemini](https://img.shields.io/badge/Gemini-AI-orange?logo=google&logoColor=white)](https://aistudio.google.com/)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 一个沉浸式的道家典籍在线阅读平台，深度集成了 AI 会话助手，旨在通过现代科技辅助探索中国古代智慧。
@@ -54,26 +53,35 @@ pnpm run build
 -   **核心框架**：React 19 (TypeScript)
 -   **构建工具**：Vite 6
 -   **样式处理**：Tailwind CSS 4
--   **状态管理**：React Hooks
+-   **状态管理**：Zustand 5
 -   **同步方案**：WebDAV HTTP Client
 
 ## 💾 数据存储与同步
 
 ### 1. 本地存储
-应用将所有数据存储在用户的浏览器本地，主要字段如下：
+
+应用使用 zustand 的 `persist` 中间件把所有需要持久化的状态**整体存入一个 localStorage 键**，避免分散读写带来的双写与一致性问题。
 
 | Key | 说明 |
 | :--- | :--- |
-| `taoism_partitions_{id}` | 书籍章节的分卷/分组配置 |
-| `taoism_interpretations_{id}` | 对应书籍的用户个人批注与心得 |
-| `taoism_ai_settings` | AI 助手配置（Endpoint、Model、API Key 等） |
-| `taoism_webdav_config` | WebDAV 连接配置 |
-| `taoism_dirty_since` | 脏数据标记，记录上次修改时间，用于触发同步提示 |
-| `taoism_local_last_write` | 上次本地写入时间戳，用于冲突检测 |
-| `taoism_remote_last_sync` | 上次成功同步时的远端时间戳，用于冲突检测 |
+| `taoism_app_state_v1` | 完整的应用持久化切片，内部字段见下表 |
+
+`taoism_app_state_v1` 中持久化的字段：
+
+| 字段 | 说明 |
+| :--- | :--- |
+| `partitions` | 所有书籍的分卷/分组配置（按 bookId 索引） |
+| `interpretations` | 所有书籍的用户个人批注与心得（按 bookId 索引） |
+| `aiSettings` | AI 助手配置（Endpoint、Model、API Key 等） |
+| `webdavConfig` | WebDAV 连接配置 |
+| `dirtySince` | 脏数据标记，记录上次修改时间，用于触发同步提示 |
+| `localLastWrite` | 上次本地写入时间戳，用于冲突检测 |
+| `remoteLastSync` | 上次成功同步时的远端时间戳，用于冲突检测 |
+
+运行时的 `syncState`（同步进行中状态与提示消息）通过 `partialize` 排除在持久化之外。
 
 ### 2. 同步逻辑
-应用在数据发生变化时，会标记本地状态为“脏”，并在界面上提醒用户当前有未同步的修改。如果配置了 WebDav，用户可以手动备份和恢复数据，备份和恢复后都会删除本地脏标记。此外亦支持一键同步，一键同步的逻辑为：
+应用在数据发生变化时，会标记本地状态为"脏"，并在界面上提醒用户当前有未同步的修改。如果配置了 WebDav，用户可以手动备份和恢复数据，备份和恢复后都会删除本地脏标记。得益于 zustand 的响应式订阅，WebDAV 下载 / 导入备份等操作会**实时刷新界面，无需刷新页面**。此外亦支持一键同步，一键同步的逻辑为：
 *   1. 当本地没有脏标记，则执行下载。
 *   2. 当本地存在脏标记，则比较本地上次远程同步时间到最后一次修改之间远端服务器是否有变更。
     *   2.1 若无变更，则上传本地数据并删除脏标记。

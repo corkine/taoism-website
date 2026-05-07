@@ -21,7 +21,8 @@ export function AboutModals({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#1A1A1A]/90 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+            onClick={() => setIsAboutOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -52,7 +53,7 @@ export function AboutModals({
 
               <div className="mt-8 pt-6 border-t border-[#E2DED0] flex justify-between items-center text-xs text-[#8C8471] font-sans">
                 <span>
-                  © {new Date().getFullYear()} <a className="hover:text-[#1A1A1A]" href="https://mvst.mazhangjing.com" target="_blank" rel="noopener noreferrer">{author}</a> <a className="hover:text-[#1A1A1A]" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">鄂ICP备17002041号-1</a>
+                  © {new Date().getFullYear()} <a className="hover:text-[#1A1A1A]" href="https://mvst.mazhangjing.com" target="_blank" rel="noopener noreferrer">{author}</a><br className="sm:hidden" /> <a className="hover:text-[#1A1A1A]" href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">鄂ICP备17002041号-1</a>
                 </span>
                 <span>{version}</span>
               </div>

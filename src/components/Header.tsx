@@ -5,11 +5,29 @@ import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
 import { CloudUpload } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { AboutModals } from './Modals';
+import { AboutModals } from './AboutModals';
 
 interface HeaderProps {
   title: string;
 }
+
+const BookNavLinks = React.memo(() => (
+  <div className="flex gap-2 text-xl font-serif mt-3 md:mt-2 justify-start md:justify-end md:ml-4 flex-wrap">
+    {BOOKS.map((book, index) => (
+      <React.Fragment key={book.id}>
+        <NavLink
+          to={`/${book.id}`}
+          className={({ isActive }) =>
+            isActive ? 'text-[#A63A2B] font-bold' : 'text-[#8C8471] hover:text-[#A63A2B]'
+          }
+        >
+          {book.title}
+        </NavLink>
+        {index < BOOKS.length - 1 && <span className="text-[#E2DED0]">/</span>}
+      </React.Fragment>
+    ))}
+  </div>
+));
 
 export const Header = React.memo(({
   title,
@@ -20,8 +38,6 @@ export const Header = React.memo(({
   const clearDirty = useAppStore(s => s.clearDirty);
   const syncState = useAppStore(s => s.syncState);
   const webdavConfig = useAppStore(s => s.webdavConfig);
-  const triggerUpload = useAppStore(s => s.triggerUpload);
-  const triggerDownload = useAppStore(s => s.triggerDownload);
   const triggerSync = useAppStore(s => s.triggerSync);
   const finalizeSync = useAppStore(s => s.finalizeSync);
   const exportToFile = useAppStore(s => s.exportToFile);
@@ -125,14 +141,7 @@ export const Header = React.memo(({
             </button>
           </div>
 
-          <div className="flex gap-2 text-xl font-serif mt-3 md:mt-2 justify-start md:justify-end md:ml-4 flex-wrap">
-            {BOOKS.map((book, index) => (
-              <React.Fragment key={book.id}>
-                <NavLink to={`/${book.id}`} className={({ isActive }) => isActive ? "text-[#A63A2B] font-bold" : "text-[#8C8471] hover:text-[#A63A2B]"}>{book.title}</NavLink>
-                {index < BOOKS.length - 1 && <span className="text-[#E2DED0]">/</span>}
-              </React.Fragment>
-            ))}
-          </div>
+          <BookNavLinks />
         </div>
       </header>
 
@@ -142,8 +151,6 @@ export const Header = React.memo(({
         globalSyncStatus={syncState.status}
         globalSyncMessage={syncState.message}
         globalLastSyncTime={syncState.lastSyncTime}
-        onTriggerUpload={triggerUpload}
-        onTriggerDownload={triggerDownload}
         onTriggerSync={triggerSync}
         onFinalizeSync={finalizeSync}
       />

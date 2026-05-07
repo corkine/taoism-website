@@ -3,14 +3,15 @@ import { Plus, Trash2, Edit2, AtSign, ChevronDown } from 'lucide-react';
 import { MainSectionModal, SubSectionModal } from './SectionModals';
 import { BOOKS } from '../data/book';
 import { useAppStore, usePartitions, useInterpretations } from '../store/useAppStore';
+import { useAIUIStore } from '../store/useAIUIStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MainSection, SubSection } from '../types';
+import { buildSectionPrompt } from '../utils/prompt';
 
 interface SidebarProps {
   bookId: string;
   selectedChapterId: number;
   setSelectedChapterId: (idOrUpdater: number | ((prev: number) => number)) => void;
-  onOpenAI: (prompt: string) => void;
 }
 
 const colors = [
@@ -35,7 +36,6 @@ export const Sidebar = React.memo(({
   bookId,
   selectedChapterId,
   setSelectedChapterId,
-  onOpenAI,
 }: SidebarProps) => {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
   const chaptersCount = bookConfig.content.length;
@@ -196,33 +196,16 @@ export const Sidebar = React.memo(({
   }, [interpretationsForBook]);
 
   const handleAskAI = (title: string, start: number, end: number) => {
-    const relevantChapters = bookConfig.content.filter(c => c.id >= start && c.id <= end);
-    const customInterpretations = interpretationsForBook;
-
-    const structureText = mainSections.map((ms, i) => {
-      const subs = ms.subSections.map((ss, j) => `    - ${i + 1}.${j + 1} ${ss.title} (CH ${ss.startChapter}-${ss.endChapter})`).join('\n');
-      return `- ${i + 1}. ${ms.title} (CH ${ms.startChapter}-${ms.endChapter})${subs ? '\n' + subs : ''}`;
-    }).join('\n');
-
-    const prompt = `你是一位精通中国古典哲学的学者，尤其擅长道家经典。
-用户正在阅读《${bookConfig.title}》，当前关注的划分范围是：【${title}】（第 ${start} 至 ${end} 章）。
-
-为了提供准确的讨论，以下是本书当前的整体划分结构：
-${structureText}
-
-以下是当前关注范围（${title}）内的详细章节内容及用户的批注：
-
-${relevantChapters.map(c => {
-      const annotation = customInterpretations[c.id];
-      return `--- 第 ${c.id} 章：${c.title} ---
-【原文】
-${c.content}
-${annotation ? `【用户批注】\n${annotation}` : ''}`;
-    }).join('\n\n')}
-
-请根据以上整体结构和详细内容，为用户提供深度的讨论与见解。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。`;
-
-    onOpenAI(prompt);
+    const prompt = buildSectionPrompt({
+      bookTitle: bookConfig.title,
+      rangeTitle: title,
+      startChapter: start,
+      endChapter: end,
+      mainSections,
+      chapters: bookConfig.content,
+      interpretations: interpretationsForBook,
+    });
+    useAIUIStore.getState().openSnapshot(prompt);
   };
 
   return (

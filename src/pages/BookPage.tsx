@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
 import { ChapterContent } from '../components/ChapterContent';
 import { AIModal } from '../components/AIModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS } from '../data/book';
+import { useAIUIStore } from '../store/useAIUIStore';
 
 export default function BookPage({ bookId }: { bookId: string }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
@@ -28,11 +29,6 @@ export default function BookPage({ bookId }: { bookId: string }) {
     navigate(`/${bookId}/${newId}`);
   }, [navigate, bookId, selectedChapterId]);
 
-  // AI Modal state
-  const [isAIOpen, setIsAIOpen] = useState(false);
-  const [isAIVisible, setIsAIVisible] = useState(false);
-  const [aiSystemPrompt, setAISystemPrompt] = useState<string | undefined>(undefined);
-
   useEffect(() => {
     document.title = `道经释义 · ${bookConfig.title} 第 ${selectedChapterId} 章`;
   }, [bookConfig.title, selectedChapterId]);
@@ -44,18 +40,22 @@ export default function BookPage({ bookId }: { bookId: string }) {
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
 
-      // Handle Ctrl + K for AI Modal Toggle
-      if (e.ctrlKey) {
-        if (e.key === 'k') {
-          e.preventDefault();
-          if (!isAIOpen) {
-            setIsAIOpen(true);
-            setIsAIVisible(true);
-          } else {
-            setIsAIVisible(prev => !prev);
-          }
-          return;
+      // Handle Ctrl + K  /  Ctrl + Shift + K  for AI Modal
+      if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const aiStore = useAIUIStore.getState();
+        if (e.shiftKey) {
+          // Ctrl+Shift+K: wipe the conversation and surface the modal on
+          // the current chapter.  Works whether the modal was closed,
+          // hidden, or already visible.
+          aiStore.resetConversation();
+          aiStore.openChapter(bookId, selectedChapterId);
+        } else if (aiStore.isOpen) {
+          aiStore.toggleVisibility();
+        } else {
+          aiStore.openChapter(bookId, selectedChapterId);
         }
+        return;
       }
 
       if (isInput) return;
@@ -75,13 +75,7 @@ export default function BookPage({ bookId }: { bookId: string }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedChapterId, setSelectedChapterId, chaptersCount, isAIOpen]);
-
-  const handleOpenAI = useCallback((prompt: string) => {
-    setAISystemPrompt(prompt);
-    setIsAIOpen(true);
-    setIsAIVisible(true);
-  }, []);
+  }, [selectedChapterId, setSelectedChapterId, chaptersCount, bookId]);
 
   return (
     <div className="max-w-7xl mx-auto min-h-screen bg-[#FDFBF7] text-[#1A1A1A] font-serif selection:bg-[#A63A2B]/10 selection:text-[#A63A2B]">
@@ -91,7 +85,6 @@ export default function BookPage({ bookId }: { bookId: string }) {
           bookId={bookId}
           selectedChapterId={selectedChapterId}
           setSelectedChapterId={setSelectedChapterId}
-          onOpenAI={handleOpenAI}
         />
 
         <div className="lg:col-span-9 flex flex-col md:flex-row gap-8 md:gap-12">
@@ -100,19 +93,12 @@ export default function BookPage({ bookId }: { bookId: string }) {
             chapters={bookConfig.content}
             selectedChapterId={selectedChapterId}
             setSelectedChapterId={setSelectedChapterId}
-            onAskAI={handleOpenAI}
-            onUpdatePrompt={setAISystemPrompt}
           />
         </div>
       </main>
 
-      {/* AI Floating Modal */}
-      <AIModal
-        isOpen={isAIOpen && isAIVisible}
-        onHide={() => setIsAIVisible(false)}
-        onClose={() => { setIsAIOpen(false); setIsAIVisible(false); }}
-        systemPrompt={aiSystemPrompt}
-      />
+      {/* AI Floating Modal — fully self-driven via useAIUIStore */}
+      <AIModal />
 
       <style>{`
       :root {

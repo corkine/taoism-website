@@ -17,8 +17,6 @@ type ModalSyncStatus =
 interface WebDAVSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTriggerUpload?: () => Promise<void>;
-  onTriggerDownload?: () => Promise<{ needsReload: boolean }>;
   onTriggerSync?: () => Promise<{ needsConfirm: boolean; conflicts?: any[]; mergedData?: any; needsReload?: boolean }>;
   onFinalizeSync?: (mergedData: any) => Promise<void>;
   globalSyncStatus?: GlobalSyncStatus;
@@ -29,8 +27,6 @@ interface WebDAVSyncModalProps {
 export function WebDAVSyncModal({
   isOpen,
   onClose,
-  onTriggerUpload,
-  onTriggerDownload,
   onTriggerSync,
   onFinalizeSync,
   globalSyncStatus,
@@ -39,6 +35,9 @@ export function WebDAVSyncModal({
 }: WebDAVSyncModalProps) {
   const storedConfig = useAppStore(s => s.webdavConfig);
   const setStoreConfig = useAppStore(s => s.setWebdavConfig);
+  const triggerUpload = useAppStore(s => s.triggerUpload);
+  const triggerDownload = useAppStore(s => s.triggerDownload);
+
   const [config, setConfig] = useState<WebDAVConfig>(storedConfig ?? { url: '', username: '', password: '' });
   const [status, setStatus] = useState<ModalSyncStatus>({ type: 'idle' });
   const [remoteInfo, setRemoteInfo] = useState<{ syncedAt?: string } | null>(null);
@@ -107,20 +106,6 @@ export function WebDAVSyncModal({
       setStatus({ type: 'error', message: e.message || '连接失败' });
     }
   }, []);
-
-  const handleUpload = async () => {
-    if (onTriggerUpload) {
-      await onTriggerUpload();
-    }
-  };
-
-  const handleDownload = async () => {
-    if (onTriggerDownload) {
-      await onTriggerDownload();
-      // No reload needed — the store updates reactively, all subscribed
-      // components refresh automatically.
-    }
-  };
 
   const handleSync = async () => {
     if (onTriggerSync) {
@@ -259,7 +244,7 @@ export function WebDAVSyncModal({
                   {config.url}
                 </p>
                 <p className="text-[10px] text-[#8C8471] font-sans mt-0.5">
-                  文件路径：{WEBDAV_REMOTE_PATH}
+                  文件路径：<a href={config.url+WEBDAV_REMOTE_PATH} target="_blank" rel="noopener noreferrer">{WEBDAV_REMOTE_PATH}</a>
                 </p>
               </div>
             </div>
@@ -295,7 +280,7 @@ export function WebDAVSyncModal({
             <div>
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={handleUpload}
+                  onClick={triggerUpload}
                   disabled={status.type === 'loading'}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1A1A1A] text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -303,7 +288,7 @@ export function WebDAVSyncModal({
                   上传到云端
                 </button>
                 <button
-                  onClick={handleDownload}
+                  onClick={triggerDownload}
                   disabled={status.type === 'loading'}
                   className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#1A1A1A] text-[#1A1A1A] text-[11px] uppercase tracking-widest font-bold font-sans hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >

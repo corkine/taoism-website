@@ -21,7 +21,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { fetchRemoteData, pushBackupToRemote } from '../utils/webdav';
 import { formatTime } from '../utils/time';
 import { BOOKS } from '../data/book';
-import { DEFAULT_AI_SETTINGS } from '../data/aiPresets';
+import { DEFAULT_AI_SETTINGS } from '../utils/prompt';
 import {
     AISettings,
     BackupData,

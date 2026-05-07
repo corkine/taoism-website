@@ -1,17 +1,14 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { ChevronRight, Edit2, Bot } from 'lucide-react';
 import { Chapter } from '../types';
 import { useAppStore, useInterpretations } from '../store/useAppStore';
+import { useAIUIStore } from '../store/useAIUIStore';
 
 interface ChapterContentProps {
   bookId: string;
   chapters: Chapter[];
   selectedChapterId: number;
   setSelectedChapterId: (id: number | ((prev: number) => number)) => void;
-  /** Called when user clicks "问 AI" — passes the system prompt for the current chapter */
-  onAskAI?: (systemPrompt: string) => void;
-  /** Called whenever the content changes to keep the prompt in sync */
-  onUpdatePrompt?: (systemPrompt: string) => void;
 }
 
 const InterpretationEditor = React.forwardRef<{ getValue: () => string }, { initialValue: string }>(
@@ -38,45 +35,24 @@ const InterpretationEditor = React.forwardRef<{ getValue: () => string }, { init
   }
 );
 
-export function ChapterContent({
+export const ChapterContent = React.memo(function ChapterContent({
   bookId,
   chapters,
   selectedChapterId,
   setSelectedChapterId,
-  onAskAI,
-  onUpdatePrompt,
 }: ChapterContentProps) {
   // Interpretations are now sourced from the zustand store and therefore
   // update automatically when a WebDAV restore or file-import happens.
   const customInterpretations = useInterpretations(bookId);
   const setInterpretation = useAppStore(s => s.setInterpretation);
+  const openChapterAI = useAIUIStore(s => s.openChapter);
   const [editingLocId, setEditingLocId] = useState<number | null>(null);
   const editorRef = useRef<{ getValue: () => string }>(null);
 
   const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
-  const generatePrompt = () => {
-    const savedInterpretation = customInterpretations[selectedChapterId] || '';
-    return `你是一位精通中国古典哲学的学者，尤其擅长道家经典。以下是用户正在阅读的章节内容，请根据此内容回答用户的问题，可以结合原文分析其哲学思想、历史背景及现代意义。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。
-
-【当前章节】
-${selectedChapter.title}
-
-【原文】
-${selectedChapter.content}
-
-${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
-  };
-
-  useEffect(() => {
-    if (onUpdatePrompt) {
-      onUpdatePrompt(generatePrompt());
-    }
-  }, [selectedChapterId, customInterpretations, onUpdatePrompt]);
-
   const handleAskAI = () => {
-    if (!onAskAI) return;
-    onAskAI(generatePrompt());
+    openChapterAI(bookId, selectedChapterId);
   };
 
   return (
@@ -169,17 +145,15 @@ ${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
         </div>
 
         {/* Ask AI button */}
-        {onAskAI && (
-          <button
-            onClick={handleAskAI}
-            title="问 AI"
-            className="mt-12 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border border-[#E2DED0] text-[#8C8471] hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors font-sans"
-          >
-            <Bot size={12} />
-            问 AI
-          </button>
-        )}
+        <button
+          onClick={handleAskAI}
+          title="问 AI"
+          className="mt-12 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border border-[#E2DED0] text-[#8C8471] hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors font-sans"
+        >
+          <Bot size={12} />
+          问 AI
+        </button>
       </article>
     </section>
   );
-}
+});

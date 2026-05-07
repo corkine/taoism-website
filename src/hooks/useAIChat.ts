@@ -11,6 +11,13 @@ export function useAIChat(settings: AISettings) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /**
+   * Ref mirror of `messages`: allows sendMessage to read the latest message
+   * list without capturing it in the closure, so `messages` can be removed
+   * from useCallback's dependency array — otherwise it would be recreated on
+   * every streaming token and cause AIModal to fully re-render each time.
+   */
+  const messagesRef = useRef<Message[]>([]);
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
@@ -24,13 +31,16 @@ export function useAIChat(settings: AISettings) {
       }
 
       const userMsg: Message = { role: 'user', content: userText };
-      const newMessages: Message[] = [...messages, userMsg];
+      const newMessages: Message[] = [...messagesRef.current, userMsg];
+      messagesRef.current = newMessages;
       setMessages(newMessages);
       setError(null);
       setIsStreaming(true);
 
       // placeholder for assistant
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      const withPlaceholder: Message[] = [...newMessages, { role: 'assistant', content: '' }];
+      messagesRef.current = withPlaceholder;
+      setMessages(withPlaceholder);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -91,6 +101,7 @@ export function useAIChat(settings: AISettings) {
                       role: 'assistant',
                       content: copy[copy.length - 1].content + delta,
                     };
+                    messagesRef.current = copy;
                     return copy;
                   });
                 }
@@ -111,6 +122,7 @@ export function useAIChat(settings: AISettings) {
             ) {
               copy.pop();
             }
+            messagesRef.current = copy;
             return copy;
           });
         }
@@ -119,10 +131,11 @@ export function useAIChat(settings: AISettings) {
         abortRef.current = null;
       }
     },
-    [messages, settings]
+    [settings] // `messages` removed — read via messagesRef instead
   );
 
   const clearMessages = useCallback(() => {
+    messagesRef.current = [];
     setMessages([]);
     setError(null);
   }, []);

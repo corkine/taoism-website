@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, ExternalLink } from 'lucide-react';
-import { AI_PRESETS } from '../data/aiPresets';
+import { AI_PRESETS } from '../utils/prompt';
 import type { AISettings } from '../types';
 
 interface AISettingsModalProps {
