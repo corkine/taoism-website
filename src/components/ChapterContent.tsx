@@ -1,7 +1,7 @@
-import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronRight, Edit2, Bot } from 'lucide-react';
 import { Chapter } from '../types';
-import { loadInterpretations, saveInterpretations, markDirty } from '../utils/storage';
+import { useAppStore, useInterpretations } from '../store/useAppStore';
 
 interface ChapterContentProps {
   bookId: string;
@@ -46,17 +46,12 @@ export function ChapterContent({
   onAskAI,
   onUpdatePrompt,
 }: ChapterContentProps) {
-  // Local state for interpretations
-  const [customInterpretations, setCustomInterpretations] = useState<Record<number, string>>(() =>
-    loadInterpretations(bookId)
-  );
+  // Interpretations are now sourced from the zustand store and therefore
+  // update automatically when a WebDAV restore or file-import happens.
+  const customInterpretations = useInterpretations(bookId);
+  const setInterpretation = useAppStore(s => s.setInterpretation);
   const [editingLocId, setEditingLocId] = useState<number | null>(null);
   const editorRef = useRef<{ getValue: () => string }>(null);
-
-  // Sync state when bookId changes
-  useEffect(() => {
-    setCustomInterpretations(loadInterpretations(bookId));
-  }, [bookId]);
 
   const selectedChapter = chapters.find(c => c.id === selectedChapterId) || chapters[0];
 
@@ -146,9 +141,7 @@ ${savedInterpretation ? `【用户注记】\n${savedInterpretation}` : ''}`;
                 <button
                   onClick={() => {
                     const finalValue = editorRef.current?.getValue() || '';
-                    const next = { ...customInterpretations, [selectedChapterId]: finalValue };
-                    saveInterpretations(bookId, next, true);
-                    setCustomInterpretations(next);
+                    setInterpretation(bookId, selectedChapterId, finalValue);
                     setEditingLocId(null);
                   }}
                   className="text-[10px] uppercase tracking-widest font-bold text-white bg-[#1A1A1A] hover:bg-[#A63A2B] transition-colors px-3 py-1.5 font-sans"

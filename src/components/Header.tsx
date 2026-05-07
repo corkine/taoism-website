@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { NavLink } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
 import { useWebDAVSync } from '../hooks/useWebDAVSync';
 import { CloudUpload } from 'lucide-react';
-import { isDirty as checkDirty, restoreBackupData, exportDataToFile } from '../utils/storage';
+import { exportDataToFile } from '../utils/storage';
+import { useAppStore } from '../store/useAppStore';
 import { AboutModals } from './Modals';
 
 interface HeaderProps {
@@ -16,20 +17,16 @@ export const Header = React.memo(({
   title,
 }: HeaderProps) => {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
-  const [isDirty, setIsDirty] = useState(checkDirty());
+  const isDirty = useAppStore(s => s.dirtySince !== null);
+  const applyBackupData = useAppStore(s => s.applyBackupData);
+  const clearDirty = useAppStore(s => s.clearDirty);
   const { syncState, webdavConfig, triggerUpload, triggerDownload, triggerSync, finalizeSync } = useWebDAVSync();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  useEffect(() => {
-    const handler = () => setIsDirty(checkDirty());
-    window.addEventListener('daoism-dirty-changed', handler);
-    // Also check on mount
-    setIsDirty(checkDirty());
-    return () => window.removeEventListener('daoism-dirty-changed', handler);
-  }, []);
-
   const handleGlobalExport = () => {
     exportDataToFile(false);
+    // After a successful export the local copy is safely persisted elsewhere.
+    clearDirty();
   };
 
   const handleDirtySync = async () => {
@@ -40,12 +37,10 @@ export const Header = React.memo(({
     const res = await triggerSync();
     if (res.needsConfirm) {
       if (confirm('当前存在未同步的变更, 是否自动合并后进行同步？')) {
-        await finalizeSync(res.mergedData)
-        setTimeout(() => window.location.reload(), 1000);
+        await finalizeSync(res.mergedData);
       }
-    } else if (res.needsReload) {
-      setTimeout(() => window.location.reload(), 1000);
     }
+    // No reload needed — store updates propagate reactively.
   };
 
   const handleGlobalImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,9 +50,9 @@ export const Header = React.memo(({
     reader.onload = (evt) => {
       try {
         const data = JSON.parse(evt.target?.result as string);
-        restoreBackupData(data);
+        applyBackupData(data);
+        clearDirty();
         alert('数据导入成功！');
-        window.location.reload();
       } catch (err: any) {
         alert(err.message || '无效的文件格式！');
       }

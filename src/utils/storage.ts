@@ -50,7 +50,14 @@ export function loadInterpretations(bookId: string): Record<number, string> {
     return {};
 }
 
-/** Save interpretations for a specific book and mark as dirty. */
+/**
+ * Save interpretations for a specific book.
+ *
+ * NOTE: dirty-flag bookkeeping is now handled by the zustand store action
+ * (`setInterpretation`).  `markDirtyFlag` is preserved for callers like
+ * backup/restore flows where we do NOT want the restored data to be
+ * considered dirty.
+ */
 export function saveInterpretations(bookId: string, interpretations: Record<number, string>, markDirtyFlag: boolean = true): void {
     localStorage.setItem(getInterpretationsKey(bookId), JSON.stringify(interpretations));
     if (markDirtyFlag) {
@@ -103,8 +110,6 @@ const DIRTY_FLAG_KEY = 'taoism_dirty_since';
  */
 export function markDirty(): void {
     localStorage.setItem(DIRTY_FLAG_KEY, new Date().toISOString());
-    // Notify listeners (e.g. the header indicator)
-    window.dispatchEvent(new CustomEvent('daoism-dirty-changed'));
 }
 
 /**
@@ -114,7 +119,6 @@ export function markDirty(): void {
  */
 export function clearDirty(): void {
     localStorage.removeItem(DIRTY_FLAG_KEY);
-    window.dispatchEvent(new CustomEvent('daoism-dirty-changed'));
 }
 
 /**
@@ -325,7 +329,10 @@ export function mergeBackupData(local: any, remote: any): { mergedData: any, con
 
 /**
  * Trigger a browser file download of the full user data backup.
- * Clears the dirty flag on success.
+ *
+ * NOTE: This does NOT clear the dirty flag anymore — callers should use the
+ * store's `clearDirty` action so both localStorage and in-memory state stay
+ * in sync.
  */
 export function exportDataToFile(includeAI: boolean = false): void {
     const data = buildBackupData(includeAI);
@@ -338,5 +345,4 @@ export function exportDataToFile(includeAI: boolean = false): void {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    clearDirty();
 }

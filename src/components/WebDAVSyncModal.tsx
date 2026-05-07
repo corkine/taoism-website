@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings, WifiSync, ArrowUpDown } from 'lucide-react';
+import { X, Cloud, Upload, Download, CheckCircle, AlertCircle, Loader, Settings, ArrowUpDown } from 'lucide-react';
 import {
   WEBDAV_REMOTE_PATH,
   fetchRemoteData,
 } from '../utils/webdav';
 import { formatTime } from '../utils/time';
-import { loadWebDAVConfig, saveWebDAVConfig } from '../utils/storage';
+import { useAppStore } from '../store/useAppStore';
 import { WebDAVConfig, GlobalSyncStatus } from '../types';
 
 type ModalSyncStatus =
@@ -37,7 +37,9 @@ export function WebDAVSyncModal({
   globalSyncMessage,
   globalLastSyncTime,
 }: WebDAVSyncModalProps) {
-  const [config, setConfig] = useState<WebDAVConfig>({ url: '', username: '', password: '' });
+  const storedConfig = useAppStore(s => s.webdavConfig);
+  const setStoreConfig = useAppStore(s => s.setWebdavConfig);
+  const [config, setConfig] = useState<WebDAVConfig>(storedConfig ?? { url: '', username: '', password: '' });
   const [status, setStatus] = useState<ModalSyncStatus>({ type: 'idle' });
   const [remoteInfo, setRemoteInfo] = useState<{ syncedAt?: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -62,10 +64,9 @@ export function WebDAVSyncModal({
   // Load saved config when modal opens
   useEffect(() => {
     if (isOpen) {
-      const saved = loadWebDAVConfig();
-      if (saved) {
-        setConfig(saved);
-        setDraftServer(saved);
+      if (storedConfig) {
+        setConfig(storedConfig);
+        setDraftServer(storedConfig);
         setShowSettings(false);
       } else {
         setShowSettings(true);
@@ -73,7 +74,7 @@ export function WebDAVSyncModal({
       setStatus({ type: 'idle' });
       setRemoteInfo(null);
     }
-  }, [isOpen]);
+  }, [isOpen, storedConfig]);
 
   const isConfigured = config.url.trim() !== '';
 
@@ -84,9 +85,8 @@ export function WebDAVSyncModal({
       username: draftServer.username.trim(),
       password: draftServer.password,
     };
-    saveWebDAVConfig(trimmed);
+    setStoreConfig(trimmed);
     setConfig(trimmed);
-    window.dispatchEvent(new Event('webdav-config-saved'));
     setShowSettings(false);
     setStatus({ type: 'idle' });
     setRemoteInfo(null);
@@ -116,10 +116,9 @@ export function WebDAVSyncModal({
 
   const handleDownload = async () => {
     if (onTriggerDownload) {
-      const { needsReload } = await onTriggerDownload();
-      if (needsReload) {
-        setTimeout(() => window.location.reload(), 1500);
-      }
+      await onTriggerDownload();
+      // No reload needed — the store updates reactively, all subscribed
+      // components refresh automatically.
     }
   };
 
@@ -131,9 +130,8 @@ export function WebDAVSyncModal({
       if (res.needsConfirm) {
         setSyncConflicts(res.conflicts || []);
         setPendingMergedData(res.mergedData);
-      } else if (res.needsReload) {
-        setTimeout(() => window.location.reload(), 1500);
       }
+      // Successful sync updates the store; UI refreshes without reload.
     }
   };
 
@@ -143,7 +141,6 @@ export function WebDAVSyncModal({
       await onFinalizeSync(pendingMergedData);
       setSyncConflicts(null);
       setPendingMergedData(null);
-      setTimeout(() => window.location.reload(), 1500);
     } catch (e: any) {
       // Error is handled by the hook and set in status
     }

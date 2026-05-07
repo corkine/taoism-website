@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Trash2, Edit2, AtSign, ChevronDown } from 'lucide-react';
 import { MainSectionModal, SubSectionModal } from './SectionModals';
 import { BOOKS } from '../data/book';
-import { loadPartitions, savePartitions, loadInterpretations, markDirty } from '../utils/storage';
+import { useAppStore, usePartitions, useInterpretations } from '../store/useAppStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MainSection, SubSection } from '../types';
 
@@ -48,9 +48,10 @@ export const Sidebar = React.memo(({
   }, [isMobile]);
 
   // --- Section Management Logic (Simplified) ---
-  const [mainSections, setMainSections] = useState<MainSection[]>(() =>
-    loadPartitions(bookId, bookConfig.defaultPartitions)
-  );
+  // Partitions come from the centralized zustand store, so they stay in
+  // sync automatically when data is restored from WebDAV / file import.
+  const mainSections = usePartitions(bookId);
+  const setPartitions = useAppStore(s => s.setPartitions);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -58,14 +59,6 @@ export const Sidebar = React.memo(({
   const [isEditingSub, setIsEditingSub] = useState(false);
   const [editingSubParentId, setEditingSubParentId] = useState<string | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMainSections(loadPartitions(bookId, bookConfig.defaultPartitions));
-  }, [bookId, bookConfig.defaultPartitions]);
-
-  useEffect(() => {
-    savePartitions(bookId, mainSections);
-  }, [mainSections, bookId]);
 
   const openEditMain = useCallback((sectionId?: string) => {
     if (sectionId) {
@@ -101,15 +94,13 @@ export const Sidebar = React.memo(({
       });
     }
     newSections.sort((a, b) => a.startChapter - b.startChapter);
-    setMainSections(newSections);
-    markDirty();
+    setPartitions(bookId, newSections);
     setIsEditing(false);
-  }, [editingIndex, mainSections, chaptersCount]);
+  }, [editingIndex, mainSections, chaptersCount, bookId, setPartitions]);
 
   const handleRemoveSection = useCallback((id: string) => {
-    setMainSections(prev => prev.filter(s => s.id !== id));
-    markDirty();
-  }, []);
+    setPartitions(bookId, mainSections.filter(s => s.id !== id));
+  }, [bookId, mainSections, setPartitions]);
 
   const openEditSub = useCallback((parentId: string, subId?: string) => {
     setEditingSubParentId(parentId);
@@ -157,23 +148,24 @@ export const Sidebar = React.memo(({
     parent.subSections = subs;
     newSections[pIndex] = parent;
 
-    setMainSections(newSections);
-    markDirty();
+    setPartitions(bookId, newSections);
     setIsEditingSub(false);
-  }, [editingSubParentId, editingSubId, mainSections, chaptersCount]);
+  }, [editingSubParentId, editingSubId, mainSections, chaptersCount, bookId, setPartitions]);
 
   const handleRemoveSubSection = useCallback((parentId: string, subId: string) => {
-    setMainSections(prev => prev.map(section => {
-      if (section.id === parentId) {
-        return {
-          ...section,
-          subSections: section.subSections.filter(sub => sub.id !== subId)
-        };
-      }
-      return section;
-    }));
-    markDirty();
-  }, []);
+    setPartitions(
+      bookId,
+      mainSections.map(section => {
+        if (section.id === parentId) {
+          return {
+            ...section,
+            subSections: section.subSections.filter(sub => sub.id !== subId)
+          };
+        }
+        return section;
+      })
+    );
+  }, [bookId, mainSections, setPartitions]);
 
   const initialMainData = useMemo(() => {
     if (editingIndex !== null) {
@@ -193,26 +185,19 @@ export const Sidebar = React.memo(({
   }, [editingSubParentId, editingSubId, mainSections, chaptersCount]);
   // --- End of Section Management Logic ---
 
-  // Annotated chapters state (reactive via storage event)
-  const [annotatedChapterIds, setAnnotatedChapterIds] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    const update = () => {
-      const data = loadInterpretations(bookId);
-      setAnnotatedChapterIds(new Set(
-        Object.entries(data)
-          .filter(([, v]) => !!(v as string)?.trim())
-          .map(([k]) => Number(k))
-      ));
-    };
-    update();
-    window.addEventListener('storage-dirty', update);
-    return () => window.removeEventListener('storage-dirty', update);
-  }, [bookId]);
+  // Annotated chapters state — derived reactively from the store.
+  const interpretationsForBook = useInterpretations(bookId);
+  const annotatedChapterIds = useMemo(() => {
+    return new Set(
+      Object.entries(interpretationsForBook)
+        .filter(([, v]) => !!(v as string)?.trim())
+        .map(([k]) => Number(k))
+    );
+  }, [interpretationsForBook]);
 
   const handleAskAI = (title: string, start: number, end: number) => {
     const relevantChapters = bookConfig.content.filter(c => c.id >= start && c.id <= end);
-    const customInterpretations = loadInterpretations(bookId);
+    const customInterpretations = interpretationsForBook;
 
     const structureText = mainSections.map((ms, i) => {
       const subs = ms.subSections.map((ss, j) => `    - ${i + 1}.${j + 1} ${ss.title} (CH ${ss.startChapter}-${ss.endChapter})`).join('\n');

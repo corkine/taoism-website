@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react';
-import { loadAISettings, saveAISettings } from '../utils/storage';
+import { useAppStore } from '../store/useAppStore';
 import { AISettings } from '../types';
 
 export const AI_PRESETS = {
@@ -58,15 +57,18 @@ const DEFAULT_SETTINGS: AISettings = {
   model: '',
 };
 
+/**
+ * Backwards-compatible hook.  State now lives in the centralized zustand
+ * store so that restores from WebDAV / file import immediately reflect in
+ * the UI without a reload.
+ *
+ * `DEFAULT_SETTINGS` is kept for documentation purposes — the store
+ * initializes with the same defaults.
+ */
 export function useAISettings() {
-  const [settings, setSettingsState] = useState<AISettings>(() =>
-    loadAISettings(DEFAULT_SETTINGS)
-  );
-
-  const saveSettings = useCallback((next: AISettings) => {
-    setSettingsState(next);
-    saveAISettings(next);
-  }, []);
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _defaults = DEFAULT_SETTINGS;
+  const settings = useAppStore(s => s.aiSettings);
+  const saveSettings = useAppStore(s => s.setAISettings);
   return { settings, saveSettings };
 }
