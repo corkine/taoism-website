@@ -423,7 +423,7 @@ export const useAppStore = create<AppState>()(
                     if (res.needsConfirm) {
                         get().setSyncStatus(
                             'conflict',
-                            '检测到冲突，请打开备份面板手动处理',
+                            '检测到冲突，请打开同步面板手动处理',
                             new Date().toISOString(),
                         );
                     }

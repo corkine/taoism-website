@@ -147,7 +147,7 @@ export function WebDAVSyncModal({
           <div className="flex items-center gap-3">
             <Cloud size={16} className="text-[#A63A2B]" />
             <h3 className="text-sm font-bold uppercase tracking-[0.25em] text-[#1A1A1A] font-sans">
-              WebDAV 备份
+              WebDAV 同步
             </h3>
           </div>
           <div className="flex items-center gap-3">
@@ -258,7 +258,7 @@ export function WebDAVSyncModal({
               <Cloud size={13} className="text-[#8C8471] mt-0.5 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-[10px] uppercase tracking-widest text-[#8C8471] font-sans font-bold mb-0.5">
-                  备份服务器
+                  同步服务器
                 </p>
                 <p className="text-xs text-[#1A1A1A] font-sans truncate" title={config.url}>
                   {config.url}
@@ -291,8 +291,7 @@ export function WebDAVSyncModal({
             )}
             {status.type === 'idle' && (
               <div className="flex items-center gap-2 text-[#8C8471]">
-                <div className="w-2 h-2 rounded-full bg-[#E2DED0] flex-shrink-0" />
-                <span className="text-xs font-sans">就绪。点击下方按钮手动上传或下载数据。</span>
+                <span className="text-xs font-sans">服务器已就绪，点击下方按钮手动上传或下载数据。</span>
               </div>
             )}
 
