@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { NavLink } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
-import { CloudUpload } from 'lucide-react';
+import { CloudUpload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { AboutModals } from './AboutModals';
+import { formatRelativeTime, formatTime } from '../utils/time';
 
 interface HeaderProps {
   title: string;
@@ -56,8 +57,14 @@ export const Header = React.memo(({
     }
     const res = await triggerSync();
     if (res.needsConfirm) {
-      if (confirm('当前存在未同步的变更, 是否自动合并后进行同步？')) {
-        await finalizeSync(res.mergedData);
+      if (
+        confirm(
+          '本地与远端存在冲突，为避免数据错乱已暂停自动合并。\n\n' +
+          '请在 WebDAV 面板中选择「上传到云端」覆盖远端，或「从云端下载」覆盖本地，' +
+          '也可前往 WebDAV 服务手动合并文件。\n\n是否立即打开 WebDAV 面板？'
+        )
+      ) {
+        setIsWebDAVOpen(true);
       }
     }
     // No reload needed — store updates propagate reactively.
@@ -107,15 +114,71 @@ export const Header = React.memo(({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.1 }}
-                  title={syncState.status === 'syncing' ? '正在同步数据...' : '有本地未同步的变更，点击同步'}
+                  title={
+                    syncState.status === 'syncing'
+                      ? '正在同步数据...'
+                      : syncState.status === 'conflict'
+                      ? (syncState.message || '检测到冲突') + '\n点击打开备份面板手动处理'
+                      : '有本地未同步的变更，点击同步'
+                  }
                   className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 bg-[#A63A2B]/10 text-[#A63A2B] rounded-full mr-2 transition-all ${syncState.status === 'syncing' ? 'opacity-70 cursor-wait' : 'hover:bg-[#A63A2B]/20'}`}
                   onClick={syncState.status === 'syncing' ? undefined : handleDirtySync}
                 >
-                  <CloudUpload size={12} className={syncState.status === 'syncing' ? 'animate-pulse' : ''} />
+                  {syncState.status === 'conflict'
+                    ? <AlertCircle size={12} />
+                    : <CloudUpload size={12} className={syncState.status === 'syncing' ? 'animate-pulse' : ''} />}
                   <span className="text-[10px] font-bold uppercase tracking-widest font-sans">
-                    {syncState.status === 'syncing' ? '正在同步' : '本地变更'}
+                    {syncState.status === 'syncing'
+                      ? '正在同步'
+                      : syncState.status === 'conflict'
+                      ? '有冲突 · 点击处理'
+                      : '本地变更'}
                   </span>
                 </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* 最近同步指示器：hover 可查看详情，点击重试 */}
+            <AnimatePresence>
+              {!isDirty && syncState.status !== 'syncing' && syncState.lastSyncTime && (syncState.status === 'success' || syncState.status === 'error' || syncState.status === 'conflict') && (
+                <motion.button
+                  key="last-sync-pill"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.1 }}
+                  onClick={handleDirtySync}
+                  title={
+                    (syncState.status === 'success'
+                      ? '同步成功'
+                      : syncState.status === 'conflict'
+                      ? '检测到冲突'
+                      : '同步失败') +
+                    (syncState.message ? ` · ${syncState.message}` : '') +
+                    (syncState.lastSyncTime
+                      ? `\n时间：${formatTime(syncState.lastSyncTime)}（${formatRelativeTime(syncState.lastSyncTime)}）`
+                      : '') +
+                    (syncState.status === 'success'
+                      ? '\n点击再次同步'
+                      : syncState.status === 'conflict'
+                      ? '\n点击打开备份面板'
+                      : '\n点击重试')
+                  }
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full mr-2 transition-all ${
+                    syncState.status === 'success'
+                      ? 'bg-[#2D7A5B]/10 text-[#2D7A5B] hover:bg-[#2D7A5B]/20'
+                      : 'bg-[#A63A2B]/10 text-[#A63A2B] hover:bg-[#A63A2B]/20'
+                  }`}
+                >
+                  {syncState.status === 'success' ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+                  <span className="text-[10px] font-bold uppercase tracking-widest font-sans">
+                    {syncState.status === 'success'
+                      ? '同步成功'
+                      : syncState.status === 'conflict'
+                      ? '有冲突 · 点击处理'
+                      : '同步失败 · 重试'}
+                  </span>
+                </motion.button>
               )}
             </AnimatePresence>
 

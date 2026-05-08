@@ -37,6 +37,8 @@ export function WebDAVSyncModal({
   const setStoreConfig = useAppStore(s => s.setWebdavConfig);
   const triggerUpload = useAppStore(s => s.triggerUpload);
   const triggerDownload = useAppStore(s => s.triggerDownload);
+  const autoSync = useAppStore(s => s.autoSync);
+  const setAutoSync = useAppStore(s => s.setAutoSync);
 
   const [config, setConfig] = useState<WebDAVConfig>(storedConfig ?? { url: '', username: '', password: '' });
   const [status, setStatus] = useState<ModalSyncStatus>({ type: 'idle' });
@@ -211,6 +213,24 @@ export function WebDAVSyncModal({
                 />
               </div>
             </div>
+
+            <label className="flex items-start gap-3 pt-2 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={autoSync}
+                onChange={e => setAutoSync(e.target.checked)}
+                className="mt-0.5 accent-[#A63A2B] w-4 h-4 cursor-pointer"
+              />
+              <span className="flex-1">
+                <span className="block text-[10px] uppercase tracking-widest text-[#1A1A1A] font-sans font-bold">
+                  自动双向同步
+                </span>
+                <span className="block text-[10px] text-[#8C8471] font-sans mt-1 leading-relaxed">
+                  开启后，应用启动、切回标签页、以及本地变更（延迟 5s）会自动双向同步。
+                  若检测到冲突不会静默合并，会在顶部提示，需点击打开本面板手动确认。
+                </span>
+              </span>
+            </label>
 
             <div className="flex justify-end gap-4 pt-1 font-sans">
               {isConfigured && (

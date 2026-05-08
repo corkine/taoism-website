@@ -6,10 +6,14 @@ import { AIModal } from '../components/AIModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { useAIUIStore } from '../store/useAIUIStore';
+import { useAutoSync } from '../hooks/useAutoSync';
 
 export default function BookPage({ bookId }: { bookId: string }) {
   const bookConfig = BOOKS.find(b => b.id === bookId)!;
   const chaptersCount = bookConfig.content.length;
+
+  // Background two-way sync (opt-in via WebDAV settings).
+  useAutoSync();
 
   const { chapterId } = useParams();
   const navigate = useNavigate();

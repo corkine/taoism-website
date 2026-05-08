@@ -184,6 +184,8 @@ interface AppState {
     interpretations: Record<string, Record<number, string>>;
     aiSettings: AISettings;
     webdavConfig: WebDAVConfig | null;
+    /** Enable automatic two-way sync on startup / dirty change / tab focus. */
+    autoSync: boolean;
     /** ISO timestamp of the earliest unsaved change; null when clean. */
     dirtySince: string | null;
     /** ISO timestamp of the last local write (conflict-detection helper). */
@@ -204,6 +206,7 @@ interface AppState {
 
     // ── Actions: WebDAV config ──────────────────────────────────────
     setWebdavConfig: (cfg: WebDAVConfig) => void;
+    setAutoSync: (enabled: boolean) => void;
 
     // ── Actions: AI settings ────────────────────────────────────────
     setAISettings: (s: AISettings) => void;
@@ -213,6 +216,8 @@ interface AppState {
     triggerUpload: () => Promise<void>;
     triggerDownload: () => Promise<{ needsReload: boolean }>;
     triggerSync: () => Promise<SyncResult & { needsReload?: boolean }>;
+    /** Non-interactive wrapper for auto-sync: swallows conflicts into `conflict` state. */
+    triggerAutoSync: () => Promise<void>;
     finalizeSync: (mergedData: BackupData) => Promise<void>;
 
     // ── Backup helpers ──────────────────────────────────────────────
@@ -238,6 +243,7 @@ export const useAppStore = create<AppState>()(
             interpretations: {},
             aiSettings: { ...DEFAULT_AI_SETTINGS },
             webdavConfig: null,
+            autoSync: false,
             dirtySince: null,
             localLastWrite: null,
             remoteLastSync: null,
@@ -271,6 +277,7 @@ export const useAppStore = create<AppState>()(
 
             // ── WebDAV config ───────────────────────────────────────
             setWebdavConfig: (cfg) => set({ webdavConfig: cfg }),
+            setAutoSync: (enabled) => set({ autoSync: enabled }),
 
             // ── AI settings ─────────────────────────────────────────
             setAISettings: (s) => {
@@ -398,6 +405,33 @@ export const useAppStore = create<AppState>()(
                 }
             },
 
+            // ── Auto-sync (non-interactive) ─────────────────────────
+            //
+            // Wraps `triggerSync` so that background callers (hooks,
+            // visibility listeners, debounced dirty watchers) never block
+            // the user with confirm() dialogs.  When a conflict is
+            // detected the result is surfaced via syncState.status =
+            // 'conflict'; it is up to the Header indicator to invite the
+            // user to open the WebDAV modal and resolve it manually.
+            triggerAutoSync: async () => {
+                const { webdavConfig, autoSync } = get();
+                if (!autoSync || !webdavConfig?.url) return;
+                // Avoid piling up requests when one is already in flight.
+                if (get().syncState.status === 'syncing') return;
+                try {
+                    const res = await get().triggerSync();
+                    if (res.needsConfirm) {
+                        get().setSyncStatus(
+                            'conflict',
+                            '检测到冲突，请打开备份面板手动处理',
+                            new Date().toISOString(),
+                        );
+                    }
+                } catch {
+                    /* triggerSync already records error state */
+                }
+            },
+
             // ── Apply backup (file import or remote download) ───────
             applyBackupData: (data) => {
                 const parsed = parseBackupData(data);
@@ -418,13 +452,23 @@ export const useAppStore = create<AppState>()(
         {
             name: PERSIST_KEY,
             storage: createJSONStorage(() => localStorage),
-            version: 1,
+            version: 2,
+            migrate: (persisted: any, version: number) => {
+                // v1 → v2: introduce the `autoSync` flag (default off to
+                // preserve the existing manual-only behaviour).
+                if (!persisted) return persisted;
+                if (version < 2 && typeof persisted === 'object') {
+                    return { ...persisted, autoSync: persisted.autoSync ?? false };
+                }
+                return persisted;
+            },
             // Persist everything except the ephemeral sync runtime state.
             partialize: (state) => ({
                 partitions: state.partitions,
                 interpretations: state.interpretations,
                 aiSettings: state.aiSettings,
                 webdavConfig: state.webdavConfig,
+                autoSync: state.autoSync,
                 dirtySince: state.dirtySince,
                 localLastWrite: state.localLastWrite,
                 remoteLastSync: state.remoteLastSync,
