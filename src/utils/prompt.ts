@@ -131,13 +131,16 @@ export function buildSectionPrompt({
 
     const structureText = mainSections
         .map((ms, i) => {
+            const msEnd = Math.min(ms.endChapter, endChapter);
             const subs = ms.subSections
                 .map(
-                    (ss, j) =>
-                        `    - ${i + 1}.${j + 1} ${ss.title} (CH ${ss.startChapter}-${ss.endChapter})`
+                    (ss, j) => {
+                        const ssEnd = Math.min(ss.endChapter, endChapter);
+                        return `    - ${i + 1}.${j + 1} ${ss.title} (CH ${ss.startChapter}-${ssEnd})`;
+                    }
                 )
                 .join('\n');
-            return `- ${i + 1}. ${ms.title} (CH ${ms.startChapter}-${ms.endChapter})${subs ? '\n' + subs : ''}`;
+            return `- ${i + 1}. ${ms.title} (CH ${ms.startChapter}-${msEnd})${subs ? '\n' + subs : ''}`;
         })
         .join('\n');
 

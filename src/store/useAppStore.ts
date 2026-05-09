@@ -327,10 +327,10 @@ export const useAppStore = create<AppState>()(
                         dirtySince: null,
                     });
                     const t = data.syncedAt ? formatTime(data.syncedAt) : '';
-                    get().setSyncStatus('success', '下载并恢复成功', t);
+                    get().setSyncStatus('success', '数据已同步', t);
                     return { needsReload: false };
                 } catch (e: any) {
-                    get().setSyncStatus('error', e.message || '下载失败');
+                    get().setSyncStatus('error', e.message || '同步失败');
                     return { needsReload: false };
                 }
             },

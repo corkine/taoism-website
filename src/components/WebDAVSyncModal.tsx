@@ -226,8 +226,7 @@ export function WebDAVSyncModal({
                   自动双向同步
                 </span>
                 <span className="block text-[10px] text-[#8C8471] font-sans mt-1 leading-relaxed">
-                  开启后，应用启动、切回标签页、以及本地变更（延迟 5s）会自动双向同步。
-                  若检测到冲突不会静默合并，会在顶部提示，需点击打开本面板手动确认。
+                  应用会适时自动双向同步变更，如果存在冲突，需要您手动确认合并。
                 </span>
               </span>
             </label>
