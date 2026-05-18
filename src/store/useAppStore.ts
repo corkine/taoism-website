@@ -21,7 +21,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { fetchRemoteData, pushBackupToRemote } from '../utils/webdav';
 import { formatTime } from '../utils/time';
 import { BOOKS } from '../data/book';
-import { DEFAULT_AI_SETTINGS } from '../utils/prompt';
+import { DEFAULT_AI_SETTINGS, DEFAULT_QUICK_PHRASES } from '../utils/prompt';
 import {
     AISettings,
     BackupData,
@@ -29,6 +29,7 @@ import {
     GlobalSyncStatus,
     MainSection,
     NormalizedState,
+    QuickPhrase,
     SyncState,
     WebDAVConfig,
 } from '../types';
@@ -59,6 +60,9 @@ function buildBackupData(state: NormalizedState, includeAI: boolean = true): Bac
     if (includeAI && state.aiSettings) {
         data.aiSettings = state.aiSettings;
     }
+    if (state.quickPhrases && state.quickPhrases.length > 0) {
+        data.quickPhrases = state.quickPhrases;
+    }
     return data;
 }
 
@@ -78,6 +82,7 @@ function parseBackupData(data: any): NormalizedState {
         partitions,
         interpretations,
         aiSettings: data.aiSettings ?? null,
+        quickPhrases: data.quickPhrases ?? [],
     };
 }
 
@@ -154,6 +159,13 @@ function mergeBackupData(local: BackupData, remote: BackupData): { mergedData: B
         merged.aiSettings = remote.aiSettings;
     }
 
+    // Quick phrases: local wins if present; otherwise adopt remote's.
+    if (!local.quickPhrases || local.quickPhrases.length === 0) {
+        if (remote.quickPhrases && remote.quickPhrases.length > 0) {
+            merged.quickPhrases = remote.quickPhrases;
+        }
+    }
+
     return { mergedData: merged, conflicts };
 }
 
@@ -183,6 +195,7 @@ interface AppState {
     partitions: Record<string, MainSection[]>;
     interpretations: Record<string, Record<number, string>>;
     aiSettings: AISettings;
+    quickPhrases: QuickPhrase[];
     webdavConfig: WebDAVConfig | null;
     /** Enable automatic two-way sync on startup / dirty change / tab focus. */
     autoSync: boolean;
@@ -211,6 +224,9 @@ interface AppState {
     // ── Actions: AI settings ────────────────────────────────────────
     setAISettings: (s: AISettings) => void;
 
+    // ── Actions: quick phrases ──────────────────────────────────────
+    setQuickPhrases: (phrases: QuickPhrase[]) => void;
+
     // ── Actions: sync orchestration ─────────────────────────────────
     setSyncStatus: (status: GlobalSyncStatus, message?: string, time?: string) => void;
     triggerUpload: () => Promise<void>;
@@ -232,6 +248,7 @@ function pickNormalized(state: AppState): NormalizedState {
         partitions: state.partitions,
         interpretations: state.interpretations,
         aiSettings: state.aiSettings,
+        quickPhrases: state.quickPhrases,
     };
 }
 
@@ -242,6 +259,7 @@ export const useAppStore = create<AppState>()(
             partitions: {},
             interpretations: {},
             aiSettings: { ...DEFAULT_AI_SETTINGS },
+            quickPhrases: [...DEFAULT_QUICK_PHRASES],
             webdavConfig: null,
             autoSync: false,
             dirtySince: null,
@@ -283,6 +301,12 @@ export const useAppStore = create<AppState>()(
             setAISettings: (s) => {
                 const now = new Date().toISOString();
                 set({ aiSettings: s, dirtySince: now, localLastWrite: now });
+            },
+
+            // ── Quick phrases ───────────────────────────────────────
+            setQuickPhrases: (phrases) => {
+                const now = new Date().toISOString();
+                set({ quickPhrases: phrases, dirtySince: now, localLastWrite: now });
             },
 
             // ── Sync status helper ──────────────────────────────────
@@ -439,6 +463,7 @@ export const useAppStore = create<AppState>()(
                     partitions: parsed.partitions,
                     interpretations: parsed.interpretations,
                     aiSettings: parsed.aiSettings ?? state.aiSettings,
+                    quickPhrases: parsed.quickPhrases ?? state.quickPhrases,
                 }));
             },
 
@@ -467,6 +492,7 @@ export const useAppStore = create<AppState>()(
                 partitions: state.partitions,
                 interpretations: state.interpretations,
                 aiSettings: state.aiSettings,
+                quickPhrases: state.quickPhrases,
                 webdavConfig: state.webdavConfig,
                 autoSync: state.autoSync,
                 dirtySince: state.dirtySince,

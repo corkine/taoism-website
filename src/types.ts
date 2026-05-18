@@ -47,6 +47,13 @@ export interface AISettings {
   model: string;
 }
 
+export interface QuickPhrase {
+  id: string;
+  title: string;
+  subtitle: string;
+  message: string;
+}
+
 // ─── Backup / restore data contracts ───────────────────────────────────────
 
 /** Normalized in-memory state used to build backup objects. */
@@ -54,6 +61,7 @@ export interface NormalizedState {
   partitions: Record<string, MainSection[]>;
   interpretations: Record<string, Record<number, string>>;
   aiSettings?: AISettings | null;
+  quickPhrases?: QuickPhrase[];
 }
 
 /** Shape of the backup object persisted to WebDAV / exported file. */
@@ -66,6 +74,7 @@ export interface BackupData {
     interpretations?: Record<number, string>;
   }>;
   aiSettings?: AISettings | null;
+  quickPhrases?: QuickPhrase[];
 }
 
 /** Single conflict entry produced by merging two backup objects. */

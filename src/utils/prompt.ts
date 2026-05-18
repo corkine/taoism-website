@@ -13,7 +13,7 @@
  * incurring extra runtime overhead.
  */
 
-import type { AISettings, Chapter, MainSection } from '../types';
+import type { AISettings, Chapter, MainSection, QuickPhrase } from '../types';
 
 // ── AI settings defaults & provider presets ──────────────────────────────
 
@@ -74,6 +74,28 @@ export const AI_PRESETS = {
         suggest_model: [],
     },
 } as const;
+
+/** Default quick-phrase templates for the AI panel. */
+export const DEFAULT_QUICK_PHRASES: QuickPhrase[] = [
+    {
+        id: 'original',
+        title: '原义模式',
+        subtitle: '帮助读者进行文本背诵',
+        message: '请逐句解释本章内容，如果有现代汉语可能陌生的词，给出读音和释义。',
+    },
+    {
+        id: 'review',
+        title: '批注模式',
+        subtitle: '结合注记评论进行回答',
+        message: '我对这一章提供了注记，请结合本章传统内容的解释，对我的注记进行评价，包括可取之处，值得商榷之处，目的是为了促进更深入的思考。',
+    },
+    {
+        id: 'usage',
+        title: '启发模式',
+        subtitle: '延伸探讨文本的应用和启示',
+        message: '请结合本章内容和我的评论，着重延伸探讨下本章内容在日常生活中的应用和启示。',
+    },
+];
 
 // ── Prompt builders ──────────────────────────────────────────────────────
 

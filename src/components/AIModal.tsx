@@ -14,14 +14,18 @@ import {
   Bot,
   User,
   Minus,
+  Zap,
+  ChevronRight,
 } from 'lucide-react';
 import { useAIChat, type Message } from '../hooks/useAIChat';
 import { AISettingsModal } from './AISettingsModal';
+import { QuickPhraseSettingsModal } from './QuickPhraseSettingsModal';
 import { useAppStore } from '../store/useAppStore';
 import { useAIUIStore } from '../store/useAIUIStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { BOOKS } from '../data/book';
 import { buildChapterPrompt } from '../utils/prompt';
+import type { QuickPhrase } from '../types';
 
 /** Plain-text renderer: only handle line-breaks */
 function renderContent(text: string) {
@@ -188,6 +192,8 @@ const DRAG_MARGIN = 8;
 export function AIModal() {
   const settings = useAppStore(s => s.aiSettings);
   const saveSettings = useAppStore(s => s.setAISettings);
+  const quickPhrases = useAppStore(s => s.quickPhrases);
+  const setQuickPhrases = useAppStore(s => s.setQuickPhrases);
 
   // AI UI store — drives open/visible/mode
   const isOpen = useAIUIStore(s => s.isOpen && s.isVisible);
@@ -219,6 +225,9 @@ export function AIModal() {
     useAIChat(settings);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+  const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false);
+  const quickBtnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Drag state
@@ -234,9 +243,6 @@ export function AIModal() {
   const isMobile = useIsMobile();
 
   // Send initial message once when opened.
-  // `sentInitial` ref already guards against double-sends, so `messages.length`
-  // is not needed in deps — removing it prevents this effect from firing on
-  // every streaming token.
   useEffect(() => {
     if (isOpen && initialUserMessage && !sentInitial.current) {
       sentInitial.current = true;
@@ -248,7 +254,6 @@ export function AIModal() {
   }, [isOpen, initialUserMessage, systemPrompt, sendMessage]);
 
   // Clear chat messages whenever the store signals a new session id
-  // (i.e. `close()` or `resetConversation()` was invoked).
   useEffect(() => {
     clearMessages();
   }, [sessionId, clearMessages]);
@@ -257,7 +262,6 @@ export function AIModal() {
   useEffect(() => {
     if (isOpen) {
       setPos(null);
-      // Delay slightly to let the modal render first
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
@@ -310,8 +314,17 @@ export function AIModal() {
 
   const handleClose = useCallback(() => {
     closeSession();
-    // clearMessages() is triggered by the sessionAlive effect above.
   }, [closeSession]);
+
+  const handleQuickPhrase = useCallback((phrase: QuickPhrase) => {
+    setIsQuickMenuOpen(false);
+    sendMessage(phrase.message, systemPrompt);
+  }, [sendMessage, systemPrompt]);
+
+  const openQuickSettings = useCallback(() => {
+    setIsQuickMenuOpen(false);
+    setIsQuickSettingsOpen(true);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -329,6 +342,14 @@ export function AIModal() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSave={saveSettings}
+      />
+
+      {/* Quick Phrase Settings modal */}
+      <QuickPhraseSettingsModal
+        isOpen={isQuickSettingsOpen}
+        onClose={() => setIsQuickSettingsOpen(false)}
+        phrases={quickPhrases}
+        onSave={setQuickPhrases}
       />
 
       {/* Main floating modal */}
@@ -382,6 +403,68 @@ export function AIModal() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            {/* Quick-phrase button */}
+            <div style={{ position: 'relative' }}>
+              <button
+                ref={quickBtnRef}
+                onClick={() => setIsQuickMenuOpen(prev => !prev)}
+                title="快问"
+                className={`w-7 h-7 flex items-center justify-center transition-colors rounded ${
+                  isQuickMenuOpen ? 'text-[#A63A2B] bg-[#A63A2B]/10' : 'text-[#8C8471] hover:text-[#A63A2B]'
+                }`}
+              >
+                <Zap size={13} />
+              </button>
+
+              {/* Quick-phrase dropdown menu */}
+              {isQuickMenuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: 4,
+                    width: 220,
+                    background: '#FDFBF7',
+                    border: '1px solid #E2DED0',
+                    boxShadow: '0 8px 24px rgba(26,26,26,0.15), 0 2px 4px rgba(26,26,26,0.08)',
+                    zIndex: 10,
+                  }}
+                >
+                  {quickPhrases.map((phrase) => (
+                    <button
+                      key={phrase.id}
+                      onClick={() => handleQuickPhrase(phrase)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-[#F5F1EA] transition-colors border-b border-[#E2DED0]/60 flex items-center justify-between gap-2 group last:border-b-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-bold text-[#1A1A1A] font-sans truncate">
+                          {phrase.title}
+                        </div>
+                        <div className="text-[10px] text-[#8C8471] font-sans truncate mt-0.5">
+                          {phrase.subtitle}
+                        </div>
+                      </div>
+                      <ChevronRight size={11} className="text-[#E2DED0] group-hover:text-[#A63A2B] flex-shrink-0 transition-colors" />
+                    </button>
+                  ))}
+
+                  {/* Divider + Config button */}
+                  <div className="border-t border-[#E2DED0]">
+                    <button
+                      onClick={openQuickSettings}
+                      className="w-full text-left px-3 py-2.5 hover:bg-[#F5F1EA] transition-colors flex items-center gap-2"
+                    >
+                      <Settings size={11} className="text-[#8C8471]" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#8C8471] font-sans">
+                        配置
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setIsSettingsOpen(true)}
               title="设置"
@@ -395,7 +478,6 @@ export function AIModal() {
               title="隐藏"
               className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#1A1A1A] transition-colors rounded"
             >
-              {/* Chevron-down as "hide" affordance */}
               <Minus size={14} />
             </button>
             {/* Close button: clears messages + closes */}
