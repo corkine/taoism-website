@@ -77,7 +77,7 @@ export const Header = React.memo(({
               animate={{ opacity: 1, x: 0 }}
               className="text-6xl font-bold text-[#1A1A1A]"
             >
-              Taoism
+              {title}
             </motion.h1>
           </div>
           <div className="h-1.5 w-32 bg-[#A63A2B]" />

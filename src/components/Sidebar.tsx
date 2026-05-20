@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Edit2, AtSign, ChevronDown } from 'lucide-react';
-import { MainSectionModal, SubSectionModal } from './SectionModals';
+import { Plus, ChevronDown, AtSign, Edit2, Trash2 } from 'lucide-react';
+import { MainSectionModal, SubSectionModal, SectionActionModal } from './SectionModals';
 import { BOOKS } from '../data/book';
 import { useAppStore, usePartitions, useInterpretations } from '../store/useAppStore';
 import { useAIUIStore } from '../store/useAIUIStore';
@@ -59,6 +59,15 @@ export const Sidebar = React.memo(({
   const [isEditingSub, setIsEditingSub] = useState(false);
   const [editingSubParentId, setEditingSubParentId] = useState<string | null>(null);
   const [editingSubId, setEditingSubId] = useState<string | null>(null);
+
+  // Action modal state (view info + perform actions)
+  const [actionModal, setActionModal] = useState<{
+    type: 'main' | 'sub';
+    sectionIndex: number;
+    subSectionIndex?: number;
+  } | null>(null);
+
+  const closeActionModal = useCallback(() => setActionModal(null), []);
 
   const openEditMain = useCallback((sectionId?: string) => {
     if (sectionId) {
@@ -208,6 +217,61 @@ export const Sidebar = React.memo(({
     useAIUIStore.getState().openSnapshot(prompt);
   };
 
+  // Derived action modal data
+  const actionModalData = useMemo(() => {
+    if (!actionModal) return null;
+    const { type, sectionIndex, subSectionIndex } = actionModal;
+    const section = mainSections[sectionIndex];
+    if (!section) return null;
+
+    if (type === 'sub' && subSectionIndex !== undefined) {
+      const sub = section.subSections[subSectionIndex];
+      if (!sub) return null;
+      return {
+        type: 'sub' as const,
+        data: {
+          title: sub.title,
+          description: sub.description,
+          startChapter: sub.startChapter,
+          endChapter: sub.endChapter,
+          label: `${sectionIndex + 1}.${subSectionIndex + 1} ${sub.title}`,
+          parentTitle: section.title,
+        },
+        onEdit: () => {
+          closeActionModal();
+          setTimeout(() => openEditSub(section.id, sub.id), 200);
+        },
+        onDelete: () => handleRemoveSubSection(section.id, sub.id),
+        onAskAI: () => {
+          closeActionModal();
+          setTimeout(() => handleAskAI(sub.title, sub.startChapter, sub.endChapter), 200);
+        },
+        onNavigate: () => setSelectedChapterId(sub.startChapter),
+      };
+    }
+
+    return {
+      type: 'main' as const,
+      data: {
+        title: section.title,
+        description: section.description,
+        startChapter: section.startChapter,
+        endChapter: section.endChapter,
+        label: `${sectionIndex + 1}. ${section.title}`,
+      },
+      onEdit: () => {
+        closeActionModal();
+        setTimeout(() => openEditMain(section.id), 200);
+      },
+      onDelete: () => handleRemoveSection(section.id),
+      onAskAI: () => {
+        closeActionModal();
+        setTimeout(() => handleAskAI(section.title, section.startChapter, section.endChapter), 200);
+      },
+      onNavigate: () => setSelectedChapterId(section.startChapter),
+    };
+  }, [actionModal, mainSections, closeActionModal, openEditMain, openEditSub, handleRemoveSection, handleRemoveSubSection, handleAskAI, setSelectedChapterId]);
+
   return (
     <aside className="lg:col-span-3 flex flex-col gap-6">
       {/* Chapter Quick Grid */}
@@ -278,49 +342,17 @@ export const Sidebar = React.memo(({
               selectedChapterId >= section.startChapter &&
               selectedChapterId <= section.endChapter;
             return (
-              <div key={section.id} className="group relative">
-                <div className="flex justify-between items-center text-sm border-b border-[#E2DED0] pb-1 hover:border-[#A63A2B] transition-colors">
+              <div key={section.id}>
+                <div
+                  onClick={() => setActionModal({ type: 'main', sectionIndex: idx })}
+                  className="flex justify-between items-center text-sm border-b border-[#E2DED0] pb-1 hover:border-[#A63A2B] transition-colors cursor-pointer"
+                >
                   <span className={`font-bold transition-colors ${isActiveMainSection ? 'text-[#A63A2B]' : 'text-[#1A1A1A]'}`}>
                     {idx + 1}. {section.title}
                   </span>
-
-                  <div className="relative flex items-center justify-end min-w-[60px]">
-                    <div className="relative group/ch-range">
-                      <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap group-hover/ch-range:opacity-0 transition-opacity cursor-default">
-                        CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
-                      </span>
-                      <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover/ch-range:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAskAI(section.title, section.startChapter, section.endChapter);
-                          }}
-                          className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
-                          title="问 AI"
-                        >
-                          <AtSign size={12} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditMain(section.id);
-                          }}
-                          className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-1"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveSection(section.id);
-                          }}
-                          className="text-[#8C8471] hover:text-red-800 transition-all p-1"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="text-[#A63A2B] font-sans text-xs font-bold whitespace-nowrap">
+                    CH {section.startChapter.toString().padStart(2, '0')}-{section.endChapter.toString().padStart(2, '0')}
+                  </span>
                 </div>
 
                 {section.description && (
@@ -336,43 +368,17 @@ export const Sidebar = React.memo(({
                       selectedChapterId >= sub.startChapter &&
                       selectedChapterId <= sub.endChapter;
                     return (
-                      <div key={sub.id} className="relative group/sub">
-                        <div className="flex justify-between items-center text-[13px] text-[#3D3D3D]">
-                          <span
-                            className={`cursor-pointer transition-colors ${isActiveSubSection
-                              ? 'font-semibold text-[#A63A2B]'
-                              : 'hover:text-[#A63A2B]'
-                              }`}
-                            onClick={() => setSelectedChapterId(sub.startChapter)}
-                          >
+                      <div key={sub.id}>
+                        <div
+                          onClick={() => setActionModal({ type: 'sub', sectionIndex: idx, subSectionIndex: sIdx })}
+                          className="flex justify-between items-center text-[13px] text-[#3D3D3D] cursor-pointer"
+                        >
+                          <span className={isActiveSubSection ? 'font-semibold text-[#A63A2B]' : ''}>
                             {idx + 1}.{sIdx + 1} {sub.title}
                           </span>
-                          <div className="relative flex items-center justify-end min-w-[32px]">
-                            <span className="text-[10px] font-sans text-[#8C8471] group-hover/sub:opacity-0 transition-opacity">
-                              {sub.startChapter}-{sub.endChapter}
-                            </span>
-                            <div className="absolute inset-y-0 right-0 flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleAskAI(sub.title, sub.startChapter, sub.endChapter)}
-                                className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-0.5"
-                                title="问 AI"
-                              >
-                                <AtSign size={10} />
-                              </button>
-                              <button
-                                onClick={() => openEditSub(section.id, sub.id)}
-                                className="text-[#8C8471] hover:text-[#A63A2B] transition-all p-0.5"
-                              >
-                                <Edit2 size={10} />
-                              </button>
-                              <button
-                                onClick={() => handleRemoveSubSection(section.id, sub.id)}
-                                className="text-[#8C8471] hover:text-red-800 transition-all p-0.5"
-                              >
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
-                          </div>
+                          <span className="text-[10px] font-sans text-[#8C8471]">
+                            {sub.startChapter}-{sub.endChapter}
+                          </span>
                         </div>
                       </div>
                     );
@@ -404,6 +410,19 @@ export const Sidebar = React.memo(({
         onSave={handleSaveSubSection}
         initialData={initialSubData}
       />
+
+      {actionModalData && (
+        <SectionActionModal
+          isOpen={true}
+          onClose={closeActionModal}
+          type={actionModalData.type}
+          data={actionModalData.data}
+          onEdit={actionModalData.onEdit}
+          onDelete={actionModalData.onDelete}
+          onAskAI={actionModalData.onAskAI}
+          onNavigate={actionModalData.onNavigate}
+        />
+      )}
     </aside>
   );
 });
