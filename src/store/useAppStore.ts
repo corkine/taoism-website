@@ -82,7 +82,7 @@ function parseBackupData(data: any): NormalizedState {
         partitions,
         interpretations,
         aiSettings: data.aiSettings ?? null,
-        quickPhrases: data.quickPhrases ?? [],
+        quickPhrases: (data.quickPhrases && data.quickPhrases.length > 0) ? data.quickPhrases : [...DEFAULT_QUICK_PHRASES],
     };
 }
 
@@ -163,6 +163,8 @@ function mergeBackupData(local: BackupData, remote: BackupData): { mergedData: B
     if (!local.quickPhrases || local.quickPhrases.length === 0) {
         if (remote.quickPhrases && remote.quickPhrases.length > 0) {
             merged.quickPhrases = remote.quickPhrases;
+        } else {
+            merged.quickPhrases = [...DEFAULT_QUICK_PHRASES];
         }
     }
 

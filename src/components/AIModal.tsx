@@ -16,6 +16,8 @@ import {
   Minus,
   Zap,
   ChevronRight,
+  Copy,
+  FileText,
 } from 'lucide-react';
 import { useAIChat, type Message } from '../hooks/useAIChat';
 import { AISettingsModal } from './AISettingsModal';
@@ -227,6 +229,7 @@ export function AIModal() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
   const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false);
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const quickBtnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -326,6 +329,12 @@ export function AIModal() {
     setIsQuickSettingsOpen(true);
   }, []);
 
+  const copyPromptToClipboard = useCallback(() => {
+    if (systemPrompt) {
+      navigator.clipboard.writeText(systemPrompt).catch(() => {});
+    }
+  }, [systemPrompt]);
+
   if (!isOpen) return null;
 
   const modalStyle: React.CSSProperties = isMobile
@@ -351,6 +360,86 @@ export function AIModal() {
         phrases={quickPhrases}
         onSave={setQuickPhrases}
       />
+
+      {/* System Prompt Viewer modal */}
+      {isPromptModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(26,26,26,0.4)',
+            backdropFilter: 'blur(2px)',
+          }}
+          onClick={() => setIsPromptModalOpen(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: isMobile ? '92%' : 520,
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#FDFBF7',
+              borderTop: '3px solid #A63A2B',
+              boxShadow: '0 24px 64px rgba(26,26,26,0.22)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-4 py-3"
+              style={{
+                borderBottom: '1px solid #E2DED0',
+                background: '#F5F1EA',
+                flexShrink: 0,
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <FileText size={14} className="text-[#A63A2B]" />
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1A1A1A] font-sans">
+                  系统提示词
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={copyPromptToClipboard}
+                  title="复制到剪贴板"
+                  className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#A63A2B] transition-colors rounded"
+                >
+                  <Copy size={13} />
+                </button>
+                <button
+                  onClick={() => setIsPromptModalOpen(false)}
+                  className="w-7 h-7 flex items-center justify-center text-[#8C8471] hover:text-[#A63A2B] transition-colors rounded"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div
+              style={{
+                padding: '16px 20px',
+                overflowY: 'auto',
+                flex: 1,
+                fontFamily: "'Noto Serif SC', 'Source Han Serif SC', 'SimSun', 'KaiTi', serif",
+                fontSize: 14,
+                lineHeight: 1.85,
+                color: '#3C3C3C',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {systemPrompt || <span style={{ color: '#8C8471', fontStyle: 'italic' }}>暂无系统提示词</span>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main floating modal */}
       <div
@@ -380,7 +469,7 @@ export function AIModal() {
           }}
         >
           <div className="flex items-center gap-2">
-            <Bot size={14} className="text-[#A63A2B]" />
+            <Bot size={14} className="text-[#A63A2B] cursor-pointer hover:opacity-80" onClick={() => setIsPromptModalOpen(true)} title="查看系统提示词" />
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1A1A1A] font-sans">
               问 AI
             </span>
