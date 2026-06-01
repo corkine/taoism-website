@@ -188,3 +188,40 @@ ${chaptersText}
 
 请根据以上整体结构和详细内容，为用户提供深度的讨论与见解。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。`;
 }
+
+/**
+ * Build a custom prompt for a multi-select selection of chapters.
+ */
+export interface MultiSelectPromptParams {
+    bookTitle: string;
+    selectedChapters: number[];
+    chapters: Chapter[];
+    interpretations: Record<number, string>;
+}
+
+export function buildMultiSelectPrompt({
+    bookTitle,
+    selectedChapters,
+    chapters,
+    interpretations,
+}: MultiSelectPromptParams): string {
+    const relevantChapters = chapters.filter(c => selectedChapters.includes(c.id));
+    const sortedChapters = relevantChapters.sort((a, b) => a.id - b.id);
+
+    const chaptersText = sortedChapters
+        .map(c => {
+            const annotation = interpretations[c.id];
+            return `--- 第 ${c.id} 章：${c.title} ---
+【原文】
+${c.content}
+${annotation ? `【用户批注】\n${annotation}` : ''}`;
+        })
+        .join('\n\n');
+
+    return `你是一位精通中国古典哲学的学者，尤其擅长道家经典。
+用户正在阅读《${bookTitle}》，当前多选关注了以下几章的内容进行合并讨论：
+
+${chaptersText}
+
+请根据以上章节内容及用户的批注，为用户提供综合的讨论与见解。请用纯文本回答，不要使用 Markdown 格式（不使用 **加粗**、# 标题、- 列表符号等），段落之间用换行分隔即可。`;
+}
