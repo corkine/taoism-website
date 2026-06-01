@@ -11,7 +11,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to={`/${BOOKS[0].id}`} replace />} />
         {/* Recitation / review mode — Laozi only */}
-        <Route path="/review" element={<ReviewPage />} />
+        <Route path="/laozi-review" element={<ReviewPage />} />
         {BOOKS.map(book => (
           <React.Fragment key={book.id}>
             <Route path={`/${book.id}/:chapterId?`} element={<BookPage bookId={book.id} />} />
