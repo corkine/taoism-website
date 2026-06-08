@@ -34,9 +34,9 @@ export interface BuiltInBackup {
 export const BUILT_IN_BACKUPS: BuiltInBackup[] = [
   {
     id: 'corkine',
-    name: 'Corkine 的分章释义',
-    description: '完整分卷与注释，以现代社会科学视角切入',
-    fileName: 'corkine.json',
+    name: '默认分章注释',
+    description: '提供完整分章注释，以现代社会科学视角切入',
+    fileName: 'default.json',
   },
 ];
 

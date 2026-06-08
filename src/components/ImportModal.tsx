@@ -110,7 +110,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
             }`}
           >
             <FileJson size={13} />
-            文件导入
+            导入文件
           </button>
           <button
             onClick={() => { setActiveTab('builtin'); setStatus({ type: 'idle' }); }}
@@ -121,7 +121,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
             }`}
           >
             <Package size={13} />
-            默认恢复
+            恢复默认
           </button>
         </div>
 
