@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { NavLink } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { WebDAVSyncModal } from './WebDAVSyncModal';
+import { ImportModal } from './ImportModal';
 import { useAppStore } from '../store/useAppStore';
 import { AboutModals } from './AboutModals';
 import { SyncStatusDot } from './SyncStatusDot';
@@ -33,8 +34,8 @@ export const Header = React.memo(({
   title,
 }: HeaderProps) => {
   const [isWebDAVOpen, setIsWebDAVOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const isDirty = useAppStore(s => s.dirtySince !== null);
-  const applyBackupData = useAppStore(s => s.applyBackupData);
   const clearDirty = useAppStore(s => s.clearDirty);
   const syncState = useAppStore(s => s.syncState);
   const webdavConfig = useAppStore(s => s.webdavConfig);
@@ -47,24 +48,6 @@ export const Header = React.memo(({
     exportToFile(false);
     // After a successful export the local copy is safely persisted elsewhere.
     clearDirty();
-  };
-
-  const handleGlobalImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = JSON.parse(evt.target?.result as string);
-        applyBackupData(data);
-        clearDirty();
-        alert('数据导入成功！');
-      } catch (err: any) {
-        alert(err.message || '无效的文件格式！');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
   };
 
   return (
@@ -93,10 +76,9 @@ export const Header = React.memo(({
               导出
             </button>
             <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
-            <label className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
+            <button onClick={() => setIsImportOpen(true)} className="text-xs font-bold uppercase tracking-widest text-[#8C8471] hover:text-[#A63A2B] transition-colors font-sans flex items-center gap-1 py-1 rounded-sm cursor-pointer">
               导入
-              <input type="file" accept=".json" onChange={handleGlobalImport} className="hidden" />
-            </label>
+            </button>
             <span className="text-xs font-bold uppercase tracking-widest text-[#8C8471] font-sans">|</span>
             <SyncStatusDot
               syncState={syncState}
@@ -123,6 +105,11 @@ export const Header = React.memo(({
         globalLastSyncTime={syncState.lastSyncTime}
         onTriggerSync={triggerSync}
         onFinalizeSync={finalizeSync}
+      />
+
+      <ImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
       />
 
       {/* About Modals */}

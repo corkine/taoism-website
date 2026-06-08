@@ -1,0 +1,6 @@
+{
+  "name": "道经全文查看器",
+  "description": "提供《道德经》前三十七章（道经）的完整原文与章节标号，支持自定义划分与阅读。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

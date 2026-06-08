@@ -82,7 +82,7 @@ function parseBackupData(data: any): NormalizedState {
         partitions,
         interpretations,
         aiSettings: data.aiSettings ?? null,
-        quickPhrases: (data.quickPhrases && data.quickPhrases.length > 0) ? data.quickPhrases : [...DEFAULT_QUICK_PHRASES],
+        quickPhrases: data.quickPhrases ?? null,
     };
 }
 
@@ -461,11 +461,14 @@ export const useAppStore = create<AppState>()(
             // ── Apply backup (file import or remote download) ───────
             applyBackupData: (data) => {
                 const parsed = parseBackupData(data);
+                const now = new Date().toISOString();
                 set(state => ({
                     partitions: parsed.partitions,
                     interpretations: parsed.interpretations,
                     aiSettings: parsed.aiSettings ?? state.aiSettings,
                     quickPhrases: parsed.quickPhrases ?? state.quickPhrases,
+                    dirtySince: now,
+                    localLastWrite: now,
                 }));
             },
 
