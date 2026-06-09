@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { X, Upload, Package, Loader, CheckCircle, AlertCircle, FileJson } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { BUILT_IN_BACKUPS, loadBuiltInBackup, stripNonBookData, type BuiltInBackup } from '../reference/core';
+import { BUILT_IN_BACKUPS, loadBuiltInBackup, stripNonBookData, type BuiltInBackup } from '../data/reference';
 
 type TabId = 'file' | 'builtin';
 
@@ -67,7 +67,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
     async (backup: BuiltInBackup) => {
       setStatus({ type: 'loading', message: `正在加载「${backup.name}」…` });
       try {
-        const raw = loadBuiltInBackup(backup.id);
+        const raw = await loadBuiltInBackup(backup.id);
         const booksOnly = stripNonBookData(raw as Record<string, unknown>);
         applyBackupData(booksOnly);
         setStatus({ type: 'success', message: `「${backup.name}」导入成功！` });

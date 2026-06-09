@@ -1,11 +1,11 @@
 /**
- * reference/core.ts
+ * data/reference.ts
  *
  * Built-in backup management for the Taoism website.
  *
  * Responsibilities:
- *   - Registry of built-in backup JSON files stored in this directory
- *   - Lazy-load a specific backup by id
+ *   - Registry of built-in backup JSON files stored in public/
+ *   - Lazy-load a specific backup by id via AJAX (fetch)
  *   - Strip non-book fields (aiSettings, quickPhrases) before import so
  *     only partitions and interpretations are restored.
  */
@@ -19,7 +19,7 @@ export interface BuiltInBackup {
   name: string;
   /** Short description displayed below the name. */
   description: string;
-  /** File name relative to this directory (e.g. "corkine.json"). */
+  /** File name relative to public/ directory (e.g. "default.json"). */
   fileName: string;
 }
 
@@ -28,46 +28,45 @@ export interface BuiltInBackup {
 /**
  * Ordered list of built-in backups.
  * To add a new built-in backup:
- *   1. Drop the .json file into `src/reference/`
+ *   1. Drop the .json file into `public/`
  *   2. Add an entry to this array
  */
 export const BUILT_IN_BACKUPS: BuiltInBackup[] = [
   {
-    id: 'corkine',
+    id: 'default',
     name: '默认分章注释',
     description: '提供完整分章注释，以现代社会科学视角切入',
     fileName: 'default.json',
   },
+  {
+    id: 'nanhuaijin',
+    name: '南怀瑾分章注释',
+    description: '提供完整分章注释，以南怀瑾先生的视角切入',
+    fileName: 'nanhuaijin.json',
+  }
 ];
 
 // ── Lazy loader ──────────────────────────────────────────────────────
 
 /**
- * Glob of all JSON files in this directory.
- * Vite resolves this at build time — new .json files added to the
- * directory are automatically included.
+ * Load a built-in backup by its id via AJAX from the public/ directory.
+ * JSON files in public/ are served as static assets and can be updated
+ * independently without re-bundling the application.
+ * Throws if the id is unknown or the file cannot be loaded.
  */
-const backupModules = import.meta.glob<{ default: unknown }>('./*.json', {
-  eager: true,
-});
-
-/**
- * Load a built-in backup by its id.
- * Throws if the id is unknown or the file cannot be found.
- */
-export function loadBuiltInBackup(id: string): unknown {
+export async function loadBuiltInBackup(id: string): Promise<unknown> {
   const meta = BUILT_IN_BACKUPS.find((b) => b.id === id);
   if (!meta) {
     throw new Error(`未找到 id 为 "${id}" 的内置备份`);
   }
 
-  const key = `./${meta.fileName}`;
-  const mod = backupModules[key];
-  if (!mod) {
-    throw new Error(`内置备份文件 "${meta.fileName}" 未找到`);
+  const url = `${import.meta.env.BASE_URL}${meta.fileName}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`内置备份文件 "${meta.fileName}" 加载失败 (HTTP ${response.status})`);
   }
 
-  return (mod as any).default ?? mod;
+  return response.json();
 }
 
 // ── Data stripping ───────────────────────────────────────────────────
