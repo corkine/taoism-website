@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { X, Upload, Package, Loader, CheckCircle, AlertCircle, FileJson } from 'lucide-react';
+import { X, Upload, Package, Loader, CheckCircle, AlertCircle, FileJson, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { BUILT_IN_BACKUPS, loadBuiltInBackup, stripNonBookData, type BuiltInBackup } from '../data/reference';
 
@@ -21,6 +21,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
 
   const [activeTab, setActiveTab] = useState<TabId>('file');
   const [status, setStatus] = useState<ImportStatus>({ type: 'idle' });
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Reset on open ──────────────────────────────────────────────────
@@ -77,6 +78,24 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
     },
     [applyBackupData],
   );
+
+  // ── Reset all partitions & interpretations (clear everything) ────
+  const handleResetAll = useCallback(() => {
+    setStatus({ type: 'loading', message: '正在清空所有数据…' });
+    setShowResetConfirm(false);
+    try {
+      // Pass an empty backup — only book data is cleared, AI settings & quick phrases are kept
+      applyBackupData({
+        version: 2,
+        type: 'daoism_backup',
+        syncedAt: new Date().toISOString(),
+        books: {},
+      });
+      setStatus({ type: 'success', message: '所有分章定义和注释已清空，可以重新开始。' });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || '重置失败' });
+    }
+  }, [applyBackupData]);
 
   if (!isOpen) return null;
 
@@ -188,6 +207,43 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
                   <div className="text-center py-8">
                     <Package size={24} className="text-[#E2DED0] mx-auto mb-2" />
                     <p className="text-xs text-[#8C8471] font-sans">暂无内置备份</p>
+                  </div>
+                )}
+              </div>
+
+              {/* ── 全部重置 ── */}
+              <div className="pt-4">
+                {!showResetConfirm ? (
+                  <button
+                    onClick={() => setShowResetConfirm(true)}
+                    disabled={status.type === 'loading'}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#A63A2B] text-white text-[11px] uppercase tracking-widest font-bold font-sans hover:bg-[#8B2D22] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <RotateCcw size={13} />
+                    全部重置
+                  </button>
+                ) : (
+                  <div className="p-4 border border-[#A63A2B] bg-[#FDF5F3]">
+                    <p className="text-[11px] text-[#A63A2B] font-sans leading-relaxed mb-3">
+                      此操作将清空所有自定义分章和注释，恢复为默认数据，不可撤销。确定继续？
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleResetAll}
+                        disabled={status.type === 'loading'}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-[#A63A2B] text-white text-[10px] uppercase tracking-widest font-bold font-sans hover:bg-[#8B2D22] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw size={11} />
+                        确认重置
+                      </button>
+                      <button
+                        onClick={() => setShowResetConfirm(false)}
+                        disabled={status.type === 'loading'}
+                        className="flex-1 px-3 py-2 border border-[#E2DED0] text-[#8C8471] text-[10px] uppercase tracking-widest font-bold font-sans hover:text-[#1A1A1A] hover:border-[#8C8471] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        取消
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

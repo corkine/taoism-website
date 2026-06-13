@@ -50,6 +50,32 @@ export function AboutModals({
                 <p>
                   用户可以使用本应用进行个人的阅读、分章和释义。用户导出的个人见解数据归用户所有。软件仅供个人非商业用途使用。
                 </p>
+
+                <div className="pt-2">
+                  <strong className="text-[#1A1A1A]">参考链接：</strong>
+                  <ul className="mt-1 space-y-1 list-inside">
+                    <li>
+                      <a
+                        href="https://www.dpm.org.cn/subject_zhaomengfu/zhaomengfu_more/245894"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#A63A2B] hover:underline"
+                      >
+                        故宫博物院 · 赵孟頫书画特展 · 赵孟頫小楷道德经卷
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://digicol.dpm.org.cn/cultural/toView/4b7e13e48f38493da09ef82de2204983?s=2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#A63A2B] hover:underline"
+                      >
+                        故宫博物院 · 数字文物库 · 赵孟頫书道德经三章卷
+                      </a>
+                    </li>
+                  </ul>
+                </div>
               </div>
 
               <div className="mt-8 pt-6 border-t border-[#E2DED0] flex justify-between items-center text-xs text-[#8C8471] font-sans">
