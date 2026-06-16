@@ -112,6 +112,7 @@ export default function ReviewPage() {
     >
       {/* ── Minimal sticky nav ────────────────────────────────── */}
       <div
+        className="px-4 py-1 md:py-2 md:pl-5"
         style={{
           position: 'sticky',
           top: 0,
@@ -119,7 +120,7 @@ export default function ReviewPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 24px',
+          // padding: '5px 15px',
           background: 'var(--panel-bg)',
           borderBottom: '1px solid var(--border-color)',
           transition: 'background 0.3s, border-color 0.3s'

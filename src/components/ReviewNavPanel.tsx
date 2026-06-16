@@ -85,7 +85,6 @@ export function ReviewNavPanel({
                 width: 320,
                 zIndex: 170,
                 background: 'var(--panel-bg)',
-                border: '1px solid var(--border-color)',
                 borderTop: '3px solid var(--accent-red)',
                 boxShadow: '0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1)',
                 transition: 'background 0.3s, border-color 0.3s, right 0.3s',
@@ -97,7 +96,7 @@ export function ReviewNavPanel({
           className="flex justify-between items-center px-4 py-3 flex-shrink-0"
           style={{ borderBottom: '1px solid var(--border-color)' }}
         >
-          <span className="text-[14px] font-bold uppercase tracking-[0.1em] font-sans" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[12px] uppercase tracking-[0.1em] font-sans" style={{ color: 'var(--text-muted)' }}>
             Index
           </span>
           <div className="flex items-center gap-1">

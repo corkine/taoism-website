@@ -61,7 +61,7 @@ export const ReviewChapterContent = React.memo(function ReviewChapterContent({
       <article className="relative bg-transparent">
         <div className="relative">
           <p 
-            className="text-lg md:text-xl leading-loose text-justify whitespace-pre-wrap tracking-wide"
+            className="text-md md:text-xl leading-loose text-justify whitespace-pre-wrap tracking-wide"
             style={{ 
               color: 'var(--text-content)',
               opacity: isReciteMode && !isReciteHovering ? 0 : 1,
