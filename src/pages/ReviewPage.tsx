@@ -177,7 +177,7 @@ export default function ReviewPage() {
               onClick={() => setIsReciteMode(prev => !prev)}
               onMouseEnter={() => setIsReciteHovering(true)}
               onMouseLeave={() => setIsReciteHovering(false)}
-              title={isReciteMode ? '退出背诵模式' : '进入背诵模式'}
+              title={isReciteMode ? '退出背诵模式' : undefined}
               className="flex items-center justify-center transition-colors theme-hover-accent"
               style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: isReciteMode ? 'var(--accent-red)' : 'var(--text-muted)' }}
             >
