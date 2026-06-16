@@ -79,11 +79,11 @@ export function ReviewNavPanel({
                 transition: 'background 0.3s, border-color 0.3s, right 0.3s',
               }
             : {
-                bottom: 80,
+                top: 10,
+                bottom: 10,
                 right: 24,
                 width: 320,
                 zIndex: 170,
-                maxHeight: 'calc(100vh - 100px)',
                 background: 'var(--panel-bg)',
                 border: '1px solid var(--border-color)',
                 borderTop: '3px solid var(--accent-red)',
@@ -120,7 +120,7 @@ export function ReviewNavPanel({
         </div>
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto hide-scrollbar flex-1 p-4 space-y-6">
+        <div className="overflow-y-auto hide-scrollbar flex-1 min-h-0 p-4 space-y-6">
           {/* Index grid */}
           <div>
             <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 font-sans" style={{ color: 'var(--accent-red)' }}>
