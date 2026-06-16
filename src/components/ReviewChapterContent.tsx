@@ -7,6 +7,8 @@ interface ReviewChapterContentProps {
   bookId: string;
   chapters: Chapter[];
   selectedChapterId: number;
+  isReciteMode?: boolean;
+  isReciteHovering?: boolean;
 }
 
 const InterpretationEditor = React.forwardRef<{ getValue: () => string }, { initialValue: string }>(
@@ -44,6 +46,8 @@ export const ReviewChapterContent = React.memo(function ReviewChapterContent({
   bookId,
   chapters,
   selectedChapterId,
+  isReciteMode = false,
+  isReciteHovering = false,
 }: ReviewChapterContentProps) {
   const customInterpretations = useInterpretations(bookId);
   const setInterpretation = useAppStore(s => s.setInterpretation);
@@ -58,7 +62,12 @@ export const ReviewChapterContent = React.memo(function ReviewChapterContent({
         <div className="relative">
           <p 
             className="text-lg md:text-xl leading-loose text-justify whitespace-pre-wrap tracking-wide"
-            style={{ color: 'var(--text-content)' }}
+            style={{ 
+              color: 'var(--text-content)',
+              opacity: isReciteMode && !isReciteHovering ? 0 : 1,
+              transition: 'opacity 0.3s ease',
+              userSelect: isReciteMode && !isReciteHovering ? 'none' : 'auto',
+            }}
           >
             {selectedChapter.content}
           </p>

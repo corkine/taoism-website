@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Bot, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutGrid, Bot, Moon, Sun, Eye, EyeOff, Brain, Quote, ScrollText } from 'lucide-react';
 import { BOOKS } from '../data/book';
 import { ReviewChapterContent } from '../components/ReviewChapterContent';
 import { ReviewNavPanel } from '../components/ReviewNavPanel';
@@ -22,6 +22,8 @@ export default function ReviewPage() {
   
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('review_dark_mode') === 'true');
   const [isPinnedRaw, setIsPinnedRaw] = useState(() => localStorage.getItem('review_panel_pinned') === 'true');
+  const [isReciteMode, setIsReciteMode] = useState(() => localStorage.getItem('review_recite_mode') === 'true');
+  const [isReciteHovering, setIsReciteHovering] = useState(false);
   const isPinned = isPinnedRaw && !isMobile;
   
   const [isGridOpen, setIsGridOpen] = useState(isPinned);
@@ -29,6 +31,10 @@ export default function ReviewPage() {
   useEffect(() => {
     localStorage.setItem('review_dark_mode', String(isDarkMode));
   }, [isDarkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('review_recite_mode', String(isReciteMode));
+  }, [isReciteMode]);
 
   useEffect(() => {
     localStorage.setItem('review_panel_pinned', String(isPinnedRaw));
@@ -167,6 +173,18 @@ export default function ReviewPage() {
             </button>
 
             <button
+              id="review-recite-btn"
+              onClick={() => setIsReciteMode(prev => !prev)}
+              onMouseEnter={() => setIsReciteHovering(true)}
+              onMouseLeave={() => setIsReciteHovering(false)}
+              title={isReciteMode ? '退出背诵模式' : '进入背诵模式'}
+              className="flex items-center justify-center transition-colors theme-hover-accent"
+              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: isReciteMode ? 'var(--accent-red)' : 'var(--text-muted)' }}
+            >
+              <ScrollText size={18} />
+            </button>
+
+            <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               title="切换模式"
               className="flex items-center justify-center transition-colors theme-hover-accent"
@@ -197,6 +215,8 @@ export default function ReviewPage() {
           bookId={BOOK_ID}
           chapters={bookConfig.content}
           selectedChapterId={selectedChapterId}
+          isReciteMode={isReciteMode}
+          isReciteHovering={isReciteHovering}
         />
       </main>
 
