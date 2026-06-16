@@ -98,7 +98,7 @@ export function ReviewNavPanel({
           style={{ borderBottom: '1px solid var(--border-color)' }}
         >
           <span className="text-[10px] font-bold uppercase tracking-[0.25em] font-sans" style={{ color: 'var(--text-muted)' }}>
-            索引 / 分章
+            Index
           </span>
           <div className="flex items-center gap-1">
             <button
@@ -124,7 +124,7 @@ export function ReviewNavPanel({
           {/* Index grid */}
           <div>
             <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 font-sans" style={{ color: 'var(--accent-red)' }}>
-              索引
+              Index
             </h3>
             <div className="grid grid-cols-9 gap-1">
               {Array.from({ length: chaptersCount }, (_, i) => i + 1).map(num => {
@@ -169,7 +169,7 @@ export function ReviewNavPanel({
           {mainSections.length > 0 && (
             <div>
               <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 font-sans" style={{ color: 'var(--text-main)' }}>
-                分章
+                Sections
               </h3>
               <div className="space-y-5">
                 {mainSections.map((section, idx) => {

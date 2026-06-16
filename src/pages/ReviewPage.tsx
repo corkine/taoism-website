@@ -132,7 +132,7 @@ export default function ReviewPage() {
             className="font-sans font-bold"
             style={{ fontSize: 14, color: 'var(--text-main)' }}
           >
-            第 {selectedChapterId.toString().padStart(2, '0')} 章
+            CH {selectedChapterId.toString().padStart(2, '0')}
           </span>
         </div>
 
@@ -194,19 +194,6 @@ export default function ReviewPage() {
             </button>
           </div>
         </div>
-
-        {/* Red progress line */}
-        {/* <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            height: 0,
-            width: `${(selectedChapterId / chaptersCount) * 100}%`,
-            background: 'var(--accent-red)',
-            transition: 'width 0.3s ease',
-          }}
-        /> */}
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
