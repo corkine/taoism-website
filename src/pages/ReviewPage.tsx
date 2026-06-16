@@ -77,7 +77,7 @@ export default function ReviewPage() {
 
   // Page title
   useEffect(() => {
-    document.title = `Review Mode - CH${selectedChapterId}`;
+    document.title = `Taoism CH${selectedChapterId}`;
   }, [selectedChapterId]);
 
   // Keyboard navigation
@@ -120,8 +120,7 @@ export default function ReviewPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '10px 24px',
-          background: 'var(--header-bg)',
-          backdropFilter: 'blur(8px)',
+          background: 'var(--panel-bg)',
           borderBottom: '1px solid var(--border-color)',
           transition: 'background 0.3s, border-color 0.3s'
         }}
@@ -197,7 +196,7 @@ export default function ReviewPage() {
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '24px 0 120px' }}>
+      <main className="pt-3 md:pt-6" style={{ maxWidth: 760, margin: '0 auto' }}>
         <ReviewChapterContent
           bookId={BOOK_ID}
           chapters={bookConfig.content}
@@ -252,6 +251,7 @@ export default function ReviewPage() {
         :root {
           --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
           --font-serif: 'Noto Serif SC', serif;
+          scrollbar-width: none;
         }
         .review-theme-light {
           --bg-main: #FDFBF7;
@@ -267,7 +267,7 @@ export default function ReviewPage() {
           --fab-icon: #FDFBF7;
         }
         .review-theme-dark {
-          --bg-main: #161616;
+          --bg-main: #1E1E1E;
           --text-main: #FDFBF7;
           --text-content: #EAEAEA;
           --text-muted: #8A8A8A;

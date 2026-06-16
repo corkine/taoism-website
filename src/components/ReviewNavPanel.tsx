@@ -97,7 +97,7 @@ export function ReviewNavPanel({
           className="flex justify-between items-center px-4 py-3 flex-shrink-0"
           style={{ borderBottom: '1px solid var(--border-color)' }}
         >
-          <span className="text-[10px] font-bold uppercase tracking-[0.25em] font-sans" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-[14px] font-bold uppercase tracking-[0.1em] font-sans" style={{ color: 'var(--text-muted)' }}>
             Index
           </span>
           <div className="flex items-center gap-1">
@@ -123,9 +123,6 @@ export function ReviewNavPanel({
         <div className="overflow-y-auto hide-scrollbar flex-1 min-h-0 p-4 space-y-6">
           {/* Index grid */}
           <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 font-sans" style={{ color: 'var(--accent-red)' }}>
-              Index
-            </h3>
             <div className="grid grid-cols-9 gap-1">
               {Array.from({ length: chaptersCount }, (_, i) => i + 1).map(num => {
                 const hasAnnotation = annotatedChapterIds.has(num);
@@ -168,9 +165,6 @@ export function ReviewNavPanel({
           {/* Section tree */}
           {mainSections.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 font-sans" style={{ color: 'var(--text-main)' }}>
-                Sections
-              </h3>
               <div className="space-y-5">
                 {mainSections.map((section, idx) => {
                   const isActiveMain =
