@@ -289,6 +289,7 @@ export const Sidebar = React.memo(({
         setTimeout(() => handleAskAI(section.title, section.startChapter, section.endChapter), 200);
       },
       onNavigate: () => setSelectedChapterId(section.startChapter),
+      onAddSubSection: () => openEditSub(section.id),
     };
   }, [actionModal, mainSections, closeActionModal, openEditMain, openEditSub, handleRemoveSection, handleRemoveSubSection, handleAskAI, setSelectedChapterId]);
 
@@ -431,9 +432,10 @@ export const Sidebar = React.memo(({
                   </p>
                 )}
 
-                {/* Sub-sections */}
-                <div className="mt-3 ml-4 space-y-2 border-l border-dashed border-[#E2DED0] pl-3">
-                  {section.subSections.map((sub, sIdx) => {
+                {/* Sub-sections — only render when there are sub-sections */}
+                {section.subSections.length > 0 && (
+                  <div className="mt-3 ml-4 space-y-2 border-l border-dashed border-[#E2DED0] pl-3">
+                    {section.subSections.map((sub, sIdx) => {
                     const isActiveSubSection =
                       selectedChapterId >= sub.startChapter &&
                       selectedChapterId <= sub.endChapter;
@@ -453,13 +455,8 @@ export const Sidebar = React.memo(({
                       </div>
                     );
                   })}
-                  <button
-                    onClick={() => openEditSub(section.id)}
-                    className="text-[10px] text-[#A63A2B] flex items-center gap-1 transition-all uppercase tracking-widest font-bold mt-2 hover:translate-x-1"
-                  >
-                    <Plus size={10} /> 添加子章
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -491,6 +488,7 @@ export const Sidebar = React.memo(({
           onDelete={actionModalData.onDelete}
           onAskAI={actionModalData.onAskAI}
           onNavigate={actionModalData.onNavigate}
+          onAddSubSection={actionModalData.onAddSubSection}
         />
       )}
     </aside>

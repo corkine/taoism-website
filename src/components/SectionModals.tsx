@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, Edit2, Trash2, AtSign, ArrowRight } from 'lucide-react';
+import { X, Save, Edit2, Trash2, AtSign, ArrowRight, Plus } from 'lucide-react';
 import { MainSection, SubSection } from '../types';
 
 type MainSectionForm = Omit<MainSection, 'id' | 'subSections'>;
@@ -232,6 +232,7 @@ export interface SectionActionModalProps {
   onDelete: () => void;
   onAskAI: () => void;
   onNavigate: () => void;
+  onAddSubSection?: () => void;
 }
 
 export function SectionActionModal({
@@ -243,6 +244,7 @@ export function SectionActionModal({
   onDelete,
   onAskAI,
   onNavigate,
+  onAddSubSection,
 }: SectionActionModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -327,6 +329,14 @@ export function SectionActionModal({
                 >
                   <Edit2 size={14} /> 编辑
                 </button>
+                {type === 'main' && onAddSubSection && (
+                  <button
+                    onClick={() => { onAddSubSection(); onClose(); }}
+                    className="px-5 py-2.5 border border-[#E2DED0] text-[#3D3D3D] text-xs font-bold uppercase tracking-widest hover:border-[#1A1A1A] hover:text-[#1A1A1A] transition-colors flex items-center gap-2"
+                  >
+                    <Plus size={14} /> 子章
+                  </button>
+                )}
               </div>
               <button
                 onClick={handleDelete}
