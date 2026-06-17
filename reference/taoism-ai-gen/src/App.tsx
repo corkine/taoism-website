@@ -2,15 +2,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ChevronRight, 
-  Hash, 
-  Settings2, 
   Plus, 
   Trash2, 
   Save, 
   X,
-  Edit2,
-  ChevronDown
-} from 'lucide-react';
+  Edit2} from 'lucide-react';
 import { daoJing } from './data/daoJing';
 import { MainSection, SubSection } from './types';
 
@@ -616,7 +612,7 @@ export default function App() {
       </AnimatePresence>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;600;900&family=Plus+Jakarta+Sans:wght@300;500;700&display=swap');
+        @import url('https://fonts.googleapis.cn/css2?family=Noto+Serif+SC:wght@300;600;900&family=Plus+Jakarta+Sans:wght@300;500;700&display=swap');
         
         :root {
           --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
