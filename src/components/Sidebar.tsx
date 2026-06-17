@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, ChevronDown, AtSign, Edit2, Trash2, ListChecks, X, Sparkles } from 'lucide-react';
+import { Plus, ChevronDown, AtSign, Edit2, Trash2, ListChecks, X, Sparkles, Brain, ScrollText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { MainSectionModal, SubSectionModal, SectionActionModal } from './SectionModals';
 import { BOOKS } from '../data/book';
 import { useAppStore, usePartitions, useInterpretations } from '../store/useAppStore';
@@ -42,6 +43,7 @@ export const Sidebar = React.memo(({
 
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setIsCollapsed(isMobile);
@@ -296,31 +298,42 @@ export const Sidebar = React.memo(({
       <div className="border border-[#E2DED0] p-4 bg-white shadow-sm rounded-sm hidden lg:block">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] font-sans">索引</h3>
-          {!isMultiSelectMode ? (
-            <button
-              onClick={() => setIsMultiSelectMode(true)}
-              className="p-1 text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors"
-              title="多选模式"
-            >
-              <ListChecks size={14} />
-            </button>
-          ) : (
-            <div className="flex gap-2">
+          <div className="flex items-center gap-1">
+            {bookId === 'laozi' && !isMultiSelectMode && (
               <button
-                onClick={() => { setIsMultiSelectMode(false); setSelectedChaptersForAI(new Set()); }}
-                className="p-1 text-[#8C8471] hover:bg-[#8C8471]/10 rounded-sm transition-colors"
-                title="退出多选"
+                onClick={() => navigate(`/${bookId}-review`)}
+                className="p-1 text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors"
+                title="背诵模式"
               >
-                <X size={14} />
+                <ScrollText size={14} />
               </button>
+            )}
+            {!isMultiSelectMode ? (
               <button
-                onClick={handleMultiAskAI}
-                className="px-1.5 py-0.5 text-[11px] font-bold text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors font-sans"
+                onClick={() => setIsMultiSelectMode(true)}
+                className="p-1 text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors"
+                title="多选模式"
               >
-                问 AI
+                <ListChecks size={14} />
               </button>
-            </div>
-          )}
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setIsMultiSelectMode(false); setSelectedChaptersForAI(new Set()); }}
+                  className="p-1 text-[#8C8471] hover:bg-[#8C8471]/10 rounded-sm transition-colors"
+                  title="退出多选"
+                >
+                  <X size={14} />
+                </button>
+                <button
+                  onClick={handleMultiAskAI}
+                  className="px-1.5 py-0.5 text-[11px] font-bold text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors font-sans"
+                >
+                  问 AI
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-9 gap-1">
           {Array.from({ length: chaptersCount }, (_, i) => i + 1).map(num => {

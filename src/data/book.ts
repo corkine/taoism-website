@@ -89,12 +89,12 @@ export const BOOKS = [
         content: liezi,
         defaultPartitions: [],
     },
-    {
-        id: 'yinfujing',
-        title: '阴符经',
-        content: yinfujing,
-        defaultPartitions: [],
-    }
+    // {
+    //     id: 'yinfujing',
+    //     title: '阴符经',
+    //     content: yinfujing,
+    //     defaultPartitions: [],
+    // }
 ];
 
 // ─── Static text constants ────────────────────────────────────────────────────
