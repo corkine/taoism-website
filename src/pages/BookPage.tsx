@@ -1,8 +1,10 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Header } from '../components/Header';
 import { Sidebar } from '../components/Sidebar';
 import { ChapterContent } from '../components/ChapterContent';
 import { AIModal } from '../components/AIModal';
+import { PrintContent } from '../components/PrintContent';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BOOKS } from '../data/book';
 import { useAIUIStore } from '../store/useAIUIStore';
@@ -14,6 +16,27 @@ export default function BookPage({ bookId }: { bookId: string }) {
 
   // Background two-way sync (opt-in via WebDAV settings).
   useAutoSync();
+
+  // Lazy-mount PrintContent only when the user triggers print.
+  const [printReady, setPrintReady] = useState(false);
+  useEffect(() => {
+    const onBeforePrint = () => {
+      // Force synchronous DOM update before browser captures the print snapshot
+      flushSync(() => {
+        setPrintReady(true);
+      });
+    };
+    const onAfterPrint = () => {
+      // Clean up after printing to save memory
+      setPrintReady(false);
+    };
+    window.addEventListener('beforeprint', onBeforePrint);
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => {
+      window.removeEventListener('beforeprint', onBeforePrint);
+      window.removeEventListener('afterprint', onAfterPrint);
+    };
+  }, []);
 
   const { chapterId } = useParams();
   const navigate = useNavigate();
@@ -103,6 +126,9 @@ export default function BookPage({ bookId }: { bookId: string }) {
 
       {/* AI Floating Modal — fully self-driven via useAIUIStore */}
       <AIModal />
+
+      {/* Print-only full-book content — lazy-mounted on first print trigger */}
+      {printReady && <PrintContent bookId={bookId} />}
 
       <style>{`
       :root {
