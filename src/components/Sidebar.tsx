@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, ChevronDown, AtSign, Edit2, Trash2, ListChecks, X, Sparkles, Brain, ScrollText } from 'lucide-react';
+import { Plus, ChevronDown, AtSign, Edit2, Trash2, ListChecks, X, Sparkles, Brain, ScrollText, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MainSectionModal, SubSectionModal, SectionActionModal } from './SectionModals';
 import { BOOKS } from '../data/book';
@@ -7,7 +7,7 @@ import { useAppStore, usePartitions, useInterpretations } from '../store/useAppS
 import { useAIUIStore } from '../store/useAIUIStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { MainSection, SubSection } from '../types';
-import { buildSectionPrompt, buildMultiSelectPrompt } from '../utils/prompt';
+import { buildSectionPrompt, buildMultiSelectPrompt, buildAllChaptersTitlesPrompt, buildAllChaptersFullPrompt } from '../utils/prompt';
 
 interface SidebarProps {
   bookId: string;
@@ -51,6 +51,7 @@ export const Sidebar = React.memo(({
 
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedChaptersForAI, setSelectedChaptersForAI] = useState<Set<number>>(new Set());
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // --- Section Management Logic (Simplified) ---
   // Partitions come from the centralized zustand store, so they stay in
@@ -237,6 +238,23 @@ export const Sidebar = React.memo(({
     setSelectedChaptersForAI(new Set());
   };
 
+  const handleStructureAskAI = useCallback(() => {
+    setIsMenuOpen(false);
+    const prompt = buildAllChaptersTitlesPrompt(bookConfig.title, mainSections);
+    useAIUIStore.getState().openSnapshot(prompt);
+  }, [bookConfig.title, mainSections]);
+
+  const handleFullAskAI = useCallback(() => {
+    setIsMenuOpen(false);
+    const prompt = buildAllChaptersFullPrompt(
+      bookConfig.title,
+      mainSections,
+      bookConfig.content,
+      interpretationsForBook,
+    );
+    useAIUIStore.getState().openSnapshot(prompt);
+  }, [bookConfig.title, bookConfig.content, mainSections, interpretationsForBook]);
+
   // Derived action modal data
   const actionModalData = useMemo(() => {
     if (!actionModal) return null;
@@ -301,25 +319,9 @@ export const Sidebar = React.memo(({
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] font-sans">索引</h3>
           <div className="flex items-center gap-1">
-            {bookId === 'laozi' && !isMultiSelectMode && (
-              <button
-                onClick={() => navigate(`/${bookId}-review`)}
-                className="p-1 text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors"
-                title="背诵模式"
-              >
-                <ScrollText size={14} />
-              </button>
-            )}
-            {!isMultiSelectMode ? (
-              <button
-                onClick={() => setIsMultiSelectMode(true)}
-                className="p-1 text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors"
-                title="多选模式"
-              >
-                <ListChecks size={14} />
-              </button>
-            ) : (
-              <div className="flex gap-2">
+            {/* Multi-select actions — kept outside menu for quick access */}
+            {isMultiSelectMode && (
+              <>
                 <button
                   onClick={() => { setIsMultiSelectMode(false); setSelectedChaptersForAI(new Set()); }}
                   className="p-1 text-[#8C8471] hover:bg-[#8C8471]/10 rounded-sm transition-colors"
@@ -331,10 +333,88 @@ export const Sidebar = React.memo(({
                   onClick={handleMultiAskAI}
                   className="px-1.5 py-0.5 text-[11px] font-bold text-[#A63A2B] hover:bg-[#A63A2B]/10 rounded-sm transition-colors font-sans"
                 >
-                  问 AI
+                  问 AI{selectedChaptersForAI.size > 0 ? `（${selectedChaptersForAI.size}）` : ''}
                 </button>
-              </div>
+              </>
             )}
+
+            {/* Menu popup */}
+            <div style={{ position: 'relative', transform: 'translateX(6px)' }}>
+              <button
+                onClick={() => setIsMenuOpen(prev => !prev)}
+                className={`p-1 rounded-sm transition-colors ${isMenuOpen ? 'text-[#A63A2B] bg-[#A63A2B]/10' : 'text-[#8C8471] hover:text-[#A63A2B]'}`}
+                title="操作菜单"
+              >
+                <MoreVertical size={14} />
+              </button>
+              {isMenuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: 4,
+                    width: 180,
+                    background: '#FDFBF7',
+                    border: '1px solid #E2DED0',
+                    boxShadow: '0 8px 24px rgba(26,26,26,0.15)',
+                    zIndex: 20,
+                  }}
+                >
+                  {/* Recite mode — laozi only, hidden during multi-select */}
+                  {bookId === 'laozi' && !isMultiSelectMode && (
+                    <button
+                      onClick={() => { setIsMenuOpen(false); navigate(`/${bookId}-review`); }}
+                      className="w-full text-left px-3 py-2 hover:bg-[#F5F1EA] transition-colors border-b border-[#E2DED0]/60 flex items-center gap-2"
+                    >
+                      <ScrollText size={12} className="text-[#8C8471] flex-shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-bold text-[#1A1A1A] font-sans leading-tight">背诵模式</div>
+                        <div className="text-[9px] text-[#8C8471] font-sans leading-tight">前往复习背诵页面</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Multi-select entry — hidden when multi-select is active */}
+                  {!isMultiSelectMode && (
+                    <button
+                      onClick={() => { setIsMenuOpen(false); setIsMultiSelectMode(true); }}
+                      className="w-full text-left px-3 py-2 hover:bg-[#F5F1EA] transition-colors border-b border-[#E2DED0]/60 flex items-center gap-2"
+                    >
+                      <ListChecks size={12} className="text-[#8C8471] flex-shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-bold text-[#1A1A1A] font-sans leading-tight">多选模式</div>
+                        <div className="text-[9px] text-[#8C8471] font-sans leading-tight">勾选章节批量问 AI</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Structure → AI */}
+                  <button
+                    onClick={handleStructureAskAI}
+                    className="w-full text-left px-3 py-2 hover:bg-[#F5F1EA] transition-colors border-b border-[#E2DED0]/60 flex items-center gap-2"
+                  >
+                    <Brain size={12} className="text-[#8C8471] flex-shrink-0" />
+                    <div>
+                      <div className="text-[11px] font-bold text-[#1A1A1A] font-sans leading-tight">结构问 AI</div>
+                      <div className="text-[9px] text-[#8C8471] font-sans leading-tight">以篇章划分结构作为上下文</div>
+                    </div>
+                  </button>
+
+                  {/* Full text → AI */}
+                  <button
+                    onClick={handleFullAskAI}
+                    className="w-full text-left px-3 py-2 hover:bg-[#F5F1EA] transition-colors flex items-center gap-2"
+                  >
+                    <Sparkles size={12} className="text-[#8C8471] flex-shrink-0" />
+                    <div>
+                      <div className="text-[11px] font-bold text-[#1A1A1A] font-sans leading-tight">全文问 AI</div>
+                      <div className="text-[9px] text-[#8C8471] font-sans leading-tight">以全部原文+释义作为上下文</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-9 gap-1">
