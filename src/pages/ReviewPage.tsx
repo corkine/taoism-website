@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Bot, Moon, Sun, Eye, EyeOff, Brain, Quote, ScrollText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutGrid, Bot, Moon, Sun, Eye, EyeOff, Brain, Quote, ScrollText, ArrowLeft } from 'lucide-react';
 import { BOOKS } from '../data/book';
 import { ReviewChapterContent } from '../components/ReviewChapterContent';
 import { ReviewNavPanel } from '../components/ReviewNavPanel';
@@ -7,6 +7,7 @@ import { AIModal } from '../components/AIModal';
 import { useAutoSync } from '../hooks/useAutoSync';
 import { useAIUIStore } from '../store/useAIUIStore';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useNavigate } from 'react-router-dom';
 
 const BOOK_ID = 'laozi';
 const LS_KEY = 'review_laozi_chapter';
@@ -19,13 +20,14 @@ export default function ReviewPage() {
   useAutoSync();
 
   const openChapterAI = useAIUIStore(s => s.openChapter);
-  
+
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('review_dark_mode') === 'true');
   const [isPinnedRaw, setIsPinnedRaw] = useState(() => localStorage.getItem('review_panel_pinned') === 'true');
   const [isReciteMode, setIsReciteMode] = useState(() => localStorage.getItem('review_recite_mode') === 'true');
   const [isReciteHovering, setIsReciteHovering] = useState(false);
+  const navigate = useNavigate();
   const isPinned = isPinnedRaw && !isMobile;
-  
+
   const [isGridOpen, setIsGridOpen] = useState(isPinned);
 
   useEffect(() => {
@@ -103,9 +105,9 @@ export default function ReviewPage() {
   return (
     <div
       className={`min-h-screen font-serif ${isDarkMode ? 'review-theme-dark dark' : 'review-theme-light'}`}
-      style={{ 
-        background: 'var(--bg-main)', 
-        color: 'var(--text-main)', 
+      style={{
+        background: 'var(--bg-main)',
+        color: 'var(--text-main)',
         transition: 'background 0.3s, color 0.3s, padding-right 0.3s',
         paddingRight: isPinned && isGridOpen ? 320 : 0
       }}
@@ -128,6 +130,15 @@ export default function ReviewPage() {
       >
         {/* Left side of header: Chapter Title */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              navigate("/laozi");
+            }}
+            className="flex items-center justify-center theme-hover-btn"
+            style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          >
+            <ArrowLeft size={18} />
+          </button>
           <span
             className="font-sans font-bold"
             style={{ fontSize: 14, color: 'var(--text-main)' }}
@@ -138,6 +149,40 @@ export default function ReviewPage() {
 
         {/* Right side of header: Navigation and Dark Mode */}
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              title="切换模式"
+              className="flex items-center justify-center transition-colors theme-hover-accent"
+              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            <button
+              id="review-recite-btn"
+              onClick={() => setIsReciteMode(prev => !prev)}
+              onMouseEnter={() => setIsReciteHovering(true)}
+              onMouseLeave={() => setIsReciteHovering(false)}
+              title={!isReciteMode ? '背诵模式' : undefined}
+              className="flex items-center justify-center transition-colors theme-hover-accent"
+              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: isReciteMode ? 'var(--accent-red)' : 'var(--text-muted)' }}
+            >
+              <ScrollText size={18} />
+            </button>
+
+            <button
+              onClick={() => setIsGridOpen(prev => !prev)}
+              title="索引 / 跳转"
+              className="flex items-center justify-center transition-colors theme-hover-accent"
+              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: isGridOpen ? 'var(--accent-red)' : 'var(--text-muted)' }}
+            >
+              <LayoutGrid size={18} />
+            </button>
+          </div>
+
+          <div style={{ width: 1, height: 16, background: 'var(--border-color)' }} />
+
           <div className="flex items-center gap-1">
             <button
               id="review-prev-btn"
@@ -157,40 +202,6 @@ export default function ReviewPage() {
               style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: selectedChapterId >= chaptersCount ? 'default' : 'pointer', color: 'var(--text-muted)' }}
             >
               <ChevronRight size={18} />
-            </button>
-          </div>
-
-          <div style={{ width: 1, height: 16, background: 'var(--border-color)' }} />
-          
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsGridOpen(prev => !prev)}
-              title="索引 / 跳转"
-              className="flex items-center justify-center transition-colors theme-hover-accent"
-              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: isGridOpen ? 'var(--accent-red)' : 'var(--text-muted)' }}
-            >
-              <LayoutGrid size={18} />
-            </button>
-
-            <button
-              id="review-recite-btn"
-              onClick={() => setIsReciteMode(prev => !prev)}
-              onMouseEnter={() => setIsReciteHovering(true)}
-              onMouseLeave={() => setIsReciteHovering(false)}
-              title={!isReciteMode ? '背诵模式' : undefined}
-              className="flex items-center justify-center transition-colors theme-hover-accent"
-              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: isReciteMode ? 'var(--accent-red)' : 'var(--text-muted)' }}
-            >
-              <ScrollText size={18} />
-            </button>
-
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              title="切换模式"
-              className="flex items-center justify-center transition-colors theme-hover-accent"
-              style={{ width: 28, height: 28, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-            >
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           </div>
         </div>

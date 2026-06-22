@@ -93,7 +93,7 @@ export function ReviewNavPanel({
       >
         {/* Header */}
         <div
-          className="flex justify-between items-center px-4 py-3 flex-shrink-0"
+          className="flex justify-between items-center px-4 py-1.5 md:py-2.5 flex-shrink-0"
           style={{ borderBottom: '1px solid var(--border-color)' }}
         >
           <span className="text-[12px] uppercase tracking-[0.1em] font-sans" style={{ color: 'var(--text-muted)' }}>

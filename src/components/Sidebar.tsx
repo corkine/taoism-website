@@ -296,7 +296,8 @@ export const Sidebar = React.memo(({
   return (
     <aside className="lg:col-span-3 flex flex-col gap-6">
       {/* Chapter Quick Grid */}
-      <div className="border border-[#E2DED0] p-4 bg-white shadow-sm rounded-sm hidden lg:block">
+      <div className="border border-[#E2DED0] p-4 bg-white shadow-sm rounded-sm">
+        {/* hidden lg:block */}
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xs font-bold uppercase tracking-widest text-[#A63A2B] font-sans">索引</h3>
           <div className="flex items-center gap-1">
