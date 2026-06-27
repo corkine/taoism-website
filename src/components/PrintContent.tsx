@@ -103,20 +103,22 @@ function ChapterBlock({
 function TableOfContents({ blocks }: { blocks: SectionBlock[] }) {
   return (
     <div className="print-toc">
-      <h2 className="print-toc-title">目录</h2>
+      <h2 className="print-toc-title">目  录</h2>
       {blocks.map(({ section, groups }) => (
         <div key={section.id} className="print-toc-section">
           <div className="print-toc-main">
             <span className="print-toc-label">{section.title}</span>
+            <span className="print-toc-dots" />
             <span className="print-toc-range">
-              （第 {section.startChapter}–{section.endChapter} 章）
+              第 {section.startChapter}–{section.endChapter} 章
             </span>
           </div>
           {groups.filter(g => !g.isMain).map((group, i) => (
             <div key={i} className="print-toc-sub">
               <span className="print-toc-label">{group.label}</span>
+              <span className="print-toc-dots" />
               <span className="print-toc-range">
-                （第 {group.chapters[0].id}–{group.chapters[group.chapters.length - 1].id} 章）
+                第 {group.chapters[0].id}–{group.chapters[group.chapters.length - 1].id} 章
               </span>
             </div>
           ))}
