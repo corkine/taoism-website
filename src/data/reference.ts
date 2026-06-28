@@ -23,6 +23,14 @@ export interface BuiltInBackup {
   fileName: string;
 }
 
+import type { BackupData, MainSection } from '../types';
+
+export interface LoadedReferenceBook {
+  meta: BuiltInBackup;
+  partitions: MainSection[];
+  interpretations: Record<number, string>;
+}
+
 // ── Registry ─────────────────────────────────────────────────────────
 
 /**
@@ -60,13 +68,36 @@ export async function loadBuiltInBackup(id: string): Promise<unknown> {
     throw new Error(`未找到 id 为 "${id}" 的内置备份`);
   }
 
-  const url = `${import.meta.env.BASE_URL}/${meta.fileName}`;
+  const url = `${import.meta.env.BASE_URL}${meta.fileName}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`内置备份文件 "${meta.fileName}" 加载失败 (HTTP ${response.status})`);
   }
 
   return response.json();
+}
+
+/** Load and validate one book from a built-in backup without mutating app state. */
+export async function loadBuiltInBook(id: string, bookId: string): Promise<LoadedReferenceBook> {
+  const meta = BUILT_IN_BACKUPS.find((backup) => backup.id === id);
+  if (!meta) throw new Error(`未找到 id 为 "${id}" 的内置备份`);
+
+  const raw = await loadBuiltInBackup(id);
+  if (!raw || typeof raw !== 'object') throw new Error('内置备份格式无效');
+
+  const backup = raw as Partial<BackupData>;
+  if (backup.type !== 'daoism_backup' || !backup.books || typeof backup.books !== 'object') {
+    throw new Error('无法识别的内置备份格式');
+  }
+
+  const book = backup.books[bookId];
+  if (!book) throw new Error(`该注释版本不包含《${bookId}》数据`);
+
+  return {
+    meta,
+    partitions: Array.isArray(book.partitions) ? book.partitions : [],
+    interpretations: (book.interpretations || {}) as Record<number, string>,
+  };
 }
 
 // ── Data stripping ───────────────────────────────────────────────────

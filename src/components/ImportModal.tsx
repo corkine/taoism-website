@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { X, Upload, Package, Loader, CheckCircle, AlertCircle, FileJson, RotateCcw } from 'lucide-react';
+import { X, Upload, Package, Loader, CheckCircle, AlertCircle, FileJson, RotateCcw, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { BUILT_IN_BACKUPS, loadBuiltInBackup, stripNonBookData, type BuiltInBackup } from '../data/reference';
 
@@ -192,14 +193,25 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
                         {backup.description}
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleBuiltInImport(backup)}
-                      disabled={status.type === 'loading'}
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] text-white text-[10px] uppercase tracking-widest font-bold font-sans hover:bg-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <Package size={11} />
-                      恢复
-                    </button>
+                    <div className="flex-shrink-0 flex items-center gap-2">
+                      <Link
+                        to={`/laozi-view/${backup.id}?from=app`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2 border border-[#E2DED0] text-[#8C8471] text-[10px] uppercase tracking-widest font-bold font-sans hover:border-[#A63A2B] hover:text-[#A63A2B] transition-colors"
+                      >
+                        <Eye size={11} />
+                        查看
+                      </Link>
+                      <button
+                        onClick={() => handleBuiltInImport(backup)}
+                        disabled={status.type === 'loading'}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] text-white text-[10px] uppercase tracking-widest font-bold font-sans hover:bg-[#A63A2B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Package size={11} />
+                        恢复
+                      </button>
+                    </div>
                   </div>
                 ))}
 

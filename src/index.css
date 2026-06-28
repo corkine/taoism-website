@@ -47,6 +47,13 @@
     color: #000;
   }
 
+  .print-book-title p {
+    margin-top: 12pt;
+    color: #666;
+    font-size: 12pt;
+    letter-spacing: 0.12em;
+  }
+
   /* ── Table of Contents ── */
   .print-toc {
     page-break-after: always;
