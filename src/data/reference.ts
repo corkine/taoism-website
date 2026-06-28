@@ -67,8 +67,11 @@ export async function loadBuiltInBackup(id: string): Promise<unknown> {
   if (!meta) {
     throw new Error(`未找到 id 为 "${id}" 的内置备份`);
   }
-
-  const url = `${import.meta.env.BASE_URL}${meta.fileName}`;
+  let baseUrl = import.meta.env.BASE_URL
+  if (!baseUrl.endsWith("/")) {
+    baseUrl = baseUrl + "/"
+  }
+  const url = `${baseUrl}${meta.fileName}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`内置备份文件 "${meta.fileName}" 加载失败 (HTTP ${response.status})`);
