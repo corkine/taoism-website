@@ -9,13 +9,15 @@ interface PrintContentProps {
   chapters: Chapter[];
   partitions: MainSection[];
   interpretations: Record<number, string>;
+  showInterpretations?: boolean;
 }
 
 function ChapterBlock({
   chapter,
   interpretation,
   prefixLabel,
-}: { chapter: Chapter; interpretation?: string; prefixLabel?: string; key?: React.Key }) {
+  showInterpretation,
+}: { chapter: Chapter; interpretation?: string; prefixLabel?: string; showInterpretation: boolean; key?: React.Key }) {
   return (
     <div className="print-chapter">
       <h3 className="print-chapter-title">
@@ -23,12 +25,14 @@ function ChapterBlock({
         {chapter.title}
       </h3>
       <p className="print-chapter-content">{chapter.content}</p>
-      <div className="print-interpretation">
-        <h4 className="print-interpretation-label">释义</h4>
-        <p className="print-interpretation-text">
-          {interpretation?.trim() || '（暂无释义）'}
-        </p>
-      </div>
+      {showInterpretation && (
+        <div className="print-interpretation">
+          <h4 className="print-interpretation-label">释义</h4>
+          <p className="print-interpretation-text">
+            {interpretation?.trim() || '（暂无释义）'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -67,6 +71,7 @@ export const PrintContent = React.memo(function PrintContent({
   chapters,
   partitions,
   interpretations,
+  showInterpretations = true,
 }: PrintContentProps) {
   const { blocks, ungrouped } = useMemo(
     () => buildSectionBlocks(partitions, chapters),
@@ -94,6 +99,7 @@ export const PrintContent = React.memo(function PrintContent({
                 chapter={chapter}
                 interpretation={interpretations[chapter.id]}
                 prefixLabel={group.label}
+                showInterpretation={showInterpretations}
               />
             ))
           )}
@@ -109,6 +115,7 @@ export const PrintContent = React.memo(function PrintContent({
               chapter={chapter}
               interpretation={interpretations[chapter.id]}
               prefixLabel="未分篇"
+              showInterpretation={showInterpretations}
             />
           ))}
         </div>

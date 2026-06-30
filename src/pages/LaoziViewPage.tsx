@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { ArrowLeft, Menu, Printer, X } from 'lucide-react';
+import { ArrowLeft, Menu, Printer, ScrollText, X } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { LaoziViewToc } from '../components/LaoziViewToc';
 import { PrintContent } from '../components/PrintContent';
@@ -21,6 +21,8 @@ export default function LaoziViewPage() {
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [printReady, setPrintReady] = useState(false);
   const [showBackButton] = useState(() => searchParams.get('from') === 'app');
+  const originalParam = searchParams.get('original')?.toLowerCase();
+  const showAnnotations = originalParam !== 'true' && originalParam !== '1';
 
   // `from=app` is an entry-only marker. Remove it immediately so copied URLs
   // remain clean and behave like standalone shared pages.
@@ -103,10 +105,22 @@ export default function LaoziViewPage() {
   }, []);
 
   const handleChapterSelect = useCallback((chapterId: number) => {
-    setSearchParams({ chapter: String(chapterId) }, { replace: true });
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('chapter', String(chapterId));
+    setSearchParams(nextParams, { replace: true });
     scrollToChapter(chapterId);
     setIsTocOpen(false);
-  }, [scrollToChapter, setSearchParams]);
+  }, [scrollToChapter, searchParams, setSearchParams]);
+
+  const handleOriginalToggle = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (showAnnotations) {
+      nextParams.set('original', 'true');
+    } else {
+      nextParams.delete('original');
+    }
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, showAnnotations]);
 
   const handlePrint = useCallback(() => {
     flushSync(() => setPrintReady(true));
@@ -152,6 +166,17 @@ export default function LaoziViewPage() {
             <button type="button" onClick={() => setIsTocOpen(true)} className="lg:hidden flex items-center gap-1.5 px-2.5 py-2 text-[10px] font-bold text-[#8C8471] hover:text-[#A63A2B]">
               <Menu size={15} /> 目录
             </button>
+            <button
+              type="button"
+              aria-pressed={!showAnnotations}
+              aria-label={showAnnotations ? '隐藏注释，只显示原文' : '显示注释'}
+              title={showAnnotations ? '隐藏注释，只显示原文' : '显示注释'}
+              onClick={handleOriginalToggle}
+              className={`flex items-center gap-1.5 py-2 text-[10px] font-bold hover:text-[#A63A2B] transition-colors ${showAnnotations ? 'text-[#8C8471]' : 'text-[#A63A2B]'}`}
+            >
+              <ScrollText size={15} />
+              <span className="hidden sm:inline">原文</span>
+            </button>
             <button type="button" aria-label="打印" onClick={handlePrint} className="flex items-center gap-1.5 px-2.5 md:px-3 py-2 text-[10px] font-bold text-[#8C8471] hover:text-[#A63A2B] transition-colors">
               <Printer size={15} /> <span className="hidden sm:inline">打印</span>
             </button>
@@ -171,13 +196,15 @@ export default function LaoziViewPage() {
         </aside>
 
         <main className="min-w-0 max-w-[820px] pt-10 md:pt-14 pb-32">
-          <div className="mb-16 border-b border-[#1A1A1A] pb-8">
-            <p className="font-sans text-[10px] uppercase tracking-[0.25em] font-bold text-[#A63A2B]">Public Annotation</p>
-            <h2 className="mt-4 text-4xl md:text-5xl font-bold">{reference.meta.name}</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#8C8471]">{reference.meta.description}</p>
-          </div>
+          {showAnnotations && (
+            <div className="mb-16 border-b border-[#1A1A1A] pb-8">
+              <p className="font-sans text-[10px] uppercase tracking-[0.25em] font-bold text-[#A63A2B]">Public Annotation</p>
+              <h2 className="mt-4 text-4xl md:text-5xl font-bold">{reference.meta.name}</h2>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#8C8471]">{reference.meta.description}</p>
+            </div>
+          )}
 
-          <div className="space-y-20 md:space-y-24">
+          <div className={showAnnotations ? 'space-y-20 md:space-y-24' : 'space-y-14 md:space-y-16'}>
             {book.content.map(chapter => (
               <article
                 key={chapter.id}
@@ -192,12 +219,14 @@ export default function LaoziViewPage() {
                 <p className="mt-7 text-lg md:text-xl leading-[2.1] text-justify whitespace-pre-wrap tracking-wide text-[#2D2926]">
                   {chapter.content}
                 </p>
-                <div className="mt-9">
-                  <h4 className="mb-4 font-sans text-[9px] uppercase tracking-[0.3em] font-bold text-[#8C8471]">释义</h4>
-                  <p className="text-[14px] md:text-[15px] leading-[2] whitespace-pre-wrap text-[#4A4640]">
-                    {reference.interpretations[chapter.id]?.trim() || '（暂无释义）'}
-                  </p>
-                </div>
+                {showAnnotations && (
+                  <div className="mt-9">
+                    <h4 className="mb-4 font-sans text-[9px] uppercase tracking-[0.3em] font-bold text-[#8C8471]">释义</h4>
+                    <p className="text-[14px] md:text-[15px] leading-[2] whitespace-pre-wrap text-[#4A4640]">
+                      {reference.interpretations[chapter.id]?.trim() || '（暂无释义）'}
+                    </p>
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -226,6 +255,7 @@ export default function LaoziViewPage() {
           chapters={book.content}
           partitions={reference.partitions}
           interpretations={reference.interpretations}
+          showInterpretations={showAnnotations}
         />
       )}
 
