@@ -4,6 +4,7 @@
 import { laozi } from './laozi';
 import { zhuangzi, yinfujing } from './zhuangzi';
 import { liezi } from './liezi';
+import { sunzi } from './sunzi';
 
 export const BOOKS = [
     {
@@ -88,6 +89,45 @@ export const BOOKS = [
         title: '列子',
         content: liezi,
         defaultPartitions: [],
+    },
+    {
+        id: 'sunzi',
+        title: '孙子',
+        content: sunzi,
+        defaultPartitions: [
+            {
+                id: 'default-s1',
+                title: '始计 ~ 谋攻',
+                startChapter: 1,
+                endChapter: 3,
+                description: '',
+                subSections: []
+            },
+            {
+                id: 'default-s2',
+                title: '军形 ~ 虚实',
+                startChapter: 4,
+                endChapter: 6,
+                description: '',
+                subSections: []
+            },
+            {
+                id: 'default-s3',
+                title: '军争 ~ 行军',
+                startChapter: 7,
+                endChapter: 9,
+                description: '',
+                subSections: []
+            },
+            {
+                id: 'default-s4',
+                title: '地形 ~ 用间',
+                startChapter: 10,
+                endChapter: 13,
+                description: '',
+                subSections: []
+            },
+        ],
     },
     // {
     //     id: 'yinfujing',
