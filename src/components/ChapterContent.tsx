@@ -78,8 +78,8 @@ export const ChapterContent = React.memo(function ChapterContent({
               <ChevronRight size={16} className="rotate-180" />
             </button>
             <button
-              disabled={selectedChapterId >= 81}
-              onClick={() => setSelectedChapterId(id => Math.min(81, typeof id === 'number' ? id + 1 : id + 1))}
+              disabled={selectedChapterId >= chapters.length}
+              onClick={() => setSelectedChapterId(id => Math.min(chapters.length, id + 1))}
               className="w-8 h-8 border border-[#E2DED0] rounded-full flex items-center justify-center text-[#8C8471] hover:text-[#1A1A1A] hover:border-[#1A1A1A] disabled:opacity-30 transition-colors"
             >
               <ChevronRight size={16} />
@@ -88,9 +88,22 @@ export const ChapterContent = React.memo(function ChapterContent({
         </div>
 
         <div className="relative">
-          <p className="text-xl md:text-2xl leading-loose text-[#2D2926] text-justify whitespace-pre-wrap tracking-wide first-letter:text-5xl md:first-letter:text-6xl first-letter:float-left first-letter:mr-3 md:first-letter:mr-4 first-letter:mt-1 md:first-letter:mt-2 first-letter:text-[#A63A2B] first-letter:font-bold">
-            {selectedChapter.content}
-          </p>
+          {bookId !== 'laozi' ? (
+          <div className="text-xl md:text-2xl leading-loose text-[#2D2926] text-justify tracking-wide">
+            {selectedChapter.content.split(/\n\s*\n/).filter(paragraph => paragraph.trim()).map((paragraph, index) => (
+              <p
+                key={index}
+                className={`indent-[2em] whitespace-pre-wrap ${index > 0 ? 'mt-[1em]' : 'first-letter:text-[#A63A2B] first-letter:font-bold'}`}
+              >
+                {paragraph.trim()}
+              </p>
+            ))}
+          </div>
+          ) : (
+            <p className="text-xl md:text-2xl leading-loose text-[#2D2926] text-justify whitespace-pre-wrap tracking-wide first-letter:text-5xl md:first-letter:text-6xl first-letter:float-left first-letter:mr-3 md:first-letter:mr-4 first-letter:mt-1 md:first-letter:mt-2 first-letter:text-[#A63A2B] first-letter:font-bold">
+              {selectedChapter.content}
+            </p>
+          )}
         </div>
 
         {/* Interpretation Area */}

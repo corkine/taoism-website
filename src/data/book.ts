@@ -3,7 +3,7 @@
 
 import { laozi } from './laozi';
 import { zhuangzi, yinfujing } from './zhuangzi';
-import { liezi } from './liezi';
+import { liezi, lieziDefaultPartitions } from './liezi';
 import { sunzi } from './sunzi';
 
 export const BOOKS = [
@@ -88,7 +88,7 @@ export const BOOKS = [
         id: 'liezi',
         title: '列子',
         content: liezi,
-        defaultPartitions: [],
+        defaultPartitions: lieziDefaultPartitions,
     },
     {
         id: 'sunzi',
